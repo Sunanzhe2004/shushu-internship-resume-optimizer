@@ -1,0 +1,29 @@
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Generated reports and experiment outputs
+reports/
+outputs/
+runs/
+wandb/
+mlruns/
+checkpoints/
+artifacts/
+*.log
+tmp_manual_eval/
+
+# Local editor/system files
+.DS_Store
+.idea/
+.vscode/

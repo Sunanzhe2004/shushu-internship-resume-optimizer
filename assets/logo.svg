@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img" aria-label="SIT shushu internship tool logo">
+  <defs>
+    <linearGradient id="furGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="laptopGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F3F4F6"/>
+      <stop offset="100%" stop-color="#9CA3AF"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="400" height="400" rx="28" fill="#FFFFFF"/>
+  <path d="M200 350C100 350 40 280 80 180C120 80 280 80 320 180C360 280 300 350 200 350Z" fill="#EDE9FE" opacity="0.6"/>
+  <ellipse cx="200" cy="330" rx="100" ry="15" fill="#C4B5FD" opacity="0.8"/>
+
+  <g transform="translate(0, -10)">
+    <circle cx="120" cy="130" r="45" fill="url(#furGrad1)"/>
+    <circle cx="120" cy="130" r="25" fill="#FBCFE8"/>
+    <circle cx="280" cy="130" r="45" fill="url(#furGrad1)"/>
+    <circle cx="280" cy="130" r="25" fill="#FBCFE8"/>
+
+    <rect x="110" y="120" width="180" height="200" rx="90" fill="url(#furGrad1)"/>
+    <rect x="130" y="180" width="140" height="130" rx="70" fill="#FDF4FF"/>
+
+    <rect x="135" y="160" width="55" height="55" rx="15" fill="none" stroke="#4C1D95" stroke-width="8"/>
+    <rect x="210" y="160" width="55" height="55" rx="15" fill="none" stroke="#4C1D95" stroke-width="8"/>
+    <line x1="190" y1="185" x2="210" y2="185" stroke="#4C1D95" stroke-width="8"/>
+
+    <circle cx="162" cy="185" r="8" fill="#1E1B4B"/>
+    <circle cx="166" cy="182" r="3" fill="#FFFFFF"/>
+    <circle cx="237" cy="185" r="8" fill="#1E1B4B"/>
+    <circle cx="241" cy="182" r="3" fill="#FFFFFF"/>
+
+    <ellipse cx="200" cy="210" rx="10" ry="6" fill="#F43F5E"/>
+    <path d="M190 225Q200 235 210 225" fill="none" stroke="#1E1B4B" stroke-width="4" stroke-linecap="round"/>
+
+    <rect x="110" y="300" width="45" height="30" rx="15" fill="#7C3AED"/>
+    <rect x="245" y="300" width="45" height="30" rx="15" fill="#7C3AED"/>
+
+    <path d="M120 240L280 240L290 320L110 320Z" fill="url(#laptopGrad1)" stroke="#6B7280" stroke-width="3" stroke-linejoin="round"/>
+    <rect x="100" y="320" width="200" height="15" rx="5" fill="#D1D5DB" stroke="#6B7280" stroke-width="3"/>
+
+    <circle cx="200" cy="285" r="20" fill="#4B5563"/>
+    <text x="200" y="293" font-family="monospace" font-weight="bold" font-size="20" fill="#34D399" text-anchor="middle">&lt;/&gt;</text>
+
+    <rect x="140" y="230" width="25" height="20" rx="10" fill="#7C3AED"/>
+    <rect x="235" y="230" width="25" height="20" rx="10" fill="#7C3AED"/>
+  </g>
+</svg>

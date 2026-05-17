@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shushu-internship-tool"
+version = "1.1.0"
+description = "Multi-source internship achievement audit, resume ranking, and interview preparation workflows."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [
+  { name = "shushu-internship-tool contributors" }
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "PyYAML>=6"
+]
+
+[project.scripts]
+shushu-achievement-audit = "shushu_internship_tool.achievement_audit:main"
+shushu-resume-rank = "shushu_internship_tool.resume_rank:main"
+shushu-doc-knowledge = "shushu_internship_tool.doc_knowledge:main"
+shushu-repo-audit = "shushu_internship_tool.repo_audit:main"
+shushu-candidate-score = "shushu_internship_tool.candidate_score:main"
+shushu-interview-pack = "shushu_internship_tool.interview_pack:main"
+
+[tool.setuptools.packages.find]
+where = ["skills/shushu-internship-tool/scripts"]
+
+[tool.pytest.ini_options]
+pythonpath = ["skills/shushu-internship-tool/scripts"]
+testpaths = ["tests"]
+addopts = "-q"
