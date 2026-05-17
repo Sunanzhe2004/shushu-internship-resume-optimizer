@@ -40,8 +40,6 @@ python -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-如果你本地已有 Python 环境，也可以直接用自己的解释器运行。这个仓库最近测试使用的是 `pytorch_learn` 环境。
-
 ## 命令
 
 ### 1. 成果审计
