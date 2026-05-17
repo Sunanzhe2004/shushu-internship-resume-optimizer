@@ -124,3 +124,22 @@ At the moment, I have mainly tested part of the workflow with my own internship-
 My own use cases, edge cases, and optimization ideas are also still limited, so many rules and generation strategies in this repository would benefit from more real materials and broader testing.
 
 Feel free to try it out, test it with your own materials, and share useful suggestions for improving the project. If you have good ideas or feedback, you are welcome to contact me on QQ: `2715745003`
+
+## Contributing
+
+Contributions are welcome.
+
+If you want to improve extraction quality, resume rewriting, interview phrasing, or testing coverage, please read [CONTRIBUTING.md](./CONTRIBUTING.md) first.
+
+## Security Reminder
+
+When using this project with internship materials, project notes, or business documents, please make sure you follow your company's security rules and do not cross any internal compliance or confidentiality red lines.
+
+In particular, do not upload, commit, or publish:
+
+- non-anonymized internal business data
+- internal company documents, strategies, or workflow details
+- materials containing user data, credentials, keys, or tokens
+- any internship content that is explicitly not allowed to be shared externally
+
+If you want to test the project, it is strongly recommended to use sanitized materials or manually rewritten summaries first.
