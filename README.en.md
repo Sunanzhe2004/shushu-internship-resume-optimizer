@@ -22,6 +22,23 @@ Turn internship code repos, project notes, and business context into resume-read
 - dual-purpose outputs for self-review, resume compression, and interview prep
 - public demo inputs included for fast onboarding
 
+## What This Project Is
+
+This repository is for interns and early-career candidates who want to turn ongoing work into clearer application materials.
+
+It is not a one-click resume generator. The main idea is to audit raw materials first, surface evidence and risks, rank what matters for a target JD, and then generate outputs that are easier to verify and rewrite manually.
+
+The intended workflow is to audit raw materials first, verify the output manually, and only then compress the result into a resume-facing version.
+
+## Core Capabilities
+
+- audit multi-source internship materials: `code_repo`, `project_summary`, `business_docs`
+- merge raw materials into achievement candidates with evidence, business context, metrics, and missing information
+- rank achievements against a target JD and generate resume-facing bullet suggestions
+- flag AI-heavy, repetitive, potentially overclaimed, or user-check-required phrasing
+- separate long-form self-review notes from concise resume-facing project summaries
+- generate STAR drafts, project intros, interview Q&A, risk answers, and an application checklist
+
 ## 3-Minute Demo
 
 The repository includes a small public example input set so you can validate the commands and output structure before plugging in your own local materials.
@@ -74,23 +91,6 @@ Suggested first files to inspect:
 - `demo_reports/rank/resume_project_summary.md`
 - `demo_reports/interview/project_intro.md`
 - `demo_reports/interview/interview_qa.md`
-
-## What This Project Is
-
-This repository is for interns and early-career candidates who want to turn ongoing work into clearer application materials.
-
-It is not a one-click resume generator. The main idea is to audit raw materials first, surface evidence and risks, rank what matters for a target JD, and then generate outputs that are easier to verify and rewrite manually.
-
-The intended workflow is to audit raw materials first, verify the output manually, and only then compress the result into a resume-facing version.
-
-## Core Capabilities
-
-- audit multi-source internship materials: `code_repo`, `project_summary`, `business_docs`
-- merge raw materials into achievement candidates with evidence, business context, metrics, and missing information
-- rank achievements against a target JD and generate resume-facing bullet suggestions
-- flag AI-heavy, repetitive, potentially overclaimed, or user-check-required phrasing
-- separate long-form self-review notes from concise resume-facing project summaries
-- generate STAR drafts, project intros, interview Q&A, risk answers, and an application checklist
 
 ## Workflow
 
