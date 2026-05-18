@@ -125,8 +125,8 @@ def short_result(item: dict[str, Any]) -> str:
     else:
         text = item.get("core_result") or first_metric(item)
     clean = sanitize_text(text)
-    if "通过 Compass API 查询 `result_code`" in clean:
-        return "通过结果码前置拦截无效样本"
+    if "result_code" in clean or "错误码" in clean or "结果码" in clean:
+        return "补齐结果状态识别与前置过滤能力"
     if "asyncio.Semaphore" in clean:
         return "补齐并发控制与服务化运行能力"
     if "接入 eval 分析链路" in clean:

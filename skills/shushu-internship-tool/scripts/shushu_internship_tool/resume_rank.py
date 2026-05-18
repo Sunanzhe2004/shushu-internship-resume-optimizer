@@ -247,8 +247,8 @@ def concise_metric(metric: str) -> str:
     clean = sanitize_text(metric)
     if not clean:
         return ""
-    if "通过 Compass API 查询 `result_code`" in clean or "匹配已知错误码" in clean:
-        return "可前置识别并拦截结果码异常样本"
+    if "result_code" in clean or "匹配已知错误码" in clean or "错误码" in clean or "结果码" in clean:
+        return "可前置识别并过滤异常状态样本"
     if "后续可以直接接入 eval 分析链路" in clean:
         return "已形成可接入后续分析链路的归因框架"
     if "asyncio.Semaphore" in clean:

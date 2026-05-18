@@ -8,7 +8,7 @@ This project is still evolving, and feedback based on real internship materials 
 
 - Read [README.md](./README.md) or [README.en.md](./README.en.md) for the current workflow and scope.
 - Make sure you do **not** commit personal internship materials, private resumes, company-sensitive docs, or generated outputs from private data.
-- The repository already ignores `tmp_manual_eval/`, but please double-check any new local folders before committing.
+- Please double-check any local notes, generated reports, or temporary evaluation folders before committing.
 
 ## Local Setup
 

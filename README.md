@@ -4,24 +4,6 @@
 
 [简体中文](./README.md) · [English](./README.en.md) · [贡献指南](./CONTRIBUTING.md) · [更新说明](./RELEASE_NOTES.md)
 
-## 快速导航
-
-- 想先看整体流程：直接看下面的流程图
-- 想马上体验：看 `3 分钟试跑`
-- 想接自己的材料：看 `CLI 用法`
-- 想了解最近改了什么：看 [更新说明](./RELEASE_NOTES.md)
-
-## 一眼看懂
-
-![workflow overview](./assets/workflow-overview.svg)
-
-## 亮点
-
-- 多源输入：同时接代码仓库、项目总结、业务文档
-- 风险提醒：显式标记 AI 味重、机械重复、疑似夸大的表述
-- 双重输出：既给自己复盘，也给简历压缩版和面试表达
-- 公开试跑：仓库内自带一套可提交的最小示例输入
-
 ## 项目定位
 
 这个仓库面向正在实习、准备秋招 / 春招，或者想把手头项目沉淀成更清晰求职材料的同学。
@@ -39,11 +21,30 @@
 - 区分“自己复盘版”和“简历压缩版”项目总结，避免长文直接贴进简历
 - 生成 STAR 草稿、项目介绍、追问问答、风险回答、投递前检查清单
 
+## 快速导航
+
+- 想先判断这个项目适不适合你：看 `项目定位`
+- 想快速了解它能解决什么问题：看 `核心能力`
+- 想马上体验：看 `3 分钟试跑`
+- 想接自己的材料：看 `CLI 用法`
+- 想了解最近改了什么：看 [更新说明](./RELEASE_NOTES.md)
+
+## 一眼看懂
+
+![workflow overview](./assets/workflow-overview.svg)
+
+## 亮点
+
+- 从零散材料到求职表达：把代码仓库、项目总结、业务文档整理成更适合简历和面试的内容
+- 不只生成，也会提醒风险：显式标记 AI 味重、机械重复、疑似夸大的表述
+- 区分两种使用场景：同时给自己复盘版和简历压缩版输出
+- 上手成本低：仓库内自带一套可公开提交的最小示例输入
+
 ## 3 分钟试跑
 
 仓库内提供了一套可公开提交的最小示例输入，适合先验证命令和输出结构，再替换成你自己的本地材料。
 
-这套 example 更偏“公开演示输入”，主要用于帮助理解结构和跑通流程；如果你要写自己的项目，量化指标、证据强度和表述边界仍然是非常重要的一环。
+这套 example 更偏“公开演示输入”，主要用于帮助理解输入结构和跑通流程；如果你要写自己的项目，量化指标、证据强度和表述边界仍然是非常重要的一环。
 
 示例目录：
 
@@ -52,7 +53,7 @@
 - `examples/minimal_input/business_overview.md`
 - `examples/minimal_input/target_jd.txt`
 
-快速试跑：
+安装：
 
 ```bash
 cd shushu-internship-resume-optimizer
@@ -60,6 +61,8 @@ python -m venv .venv
 . .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
+
+试跑命令：
 
 PowerShell:
 
@@ -96,6 +99,8 @@ python -m shushu_internship_tool.interview_pack \
 
 ## 工作流
 
+主流程：
+
 `JD + 多源实习材料 -> achievement_audit -> resume_rank -> interview_pack`
 
 可选增强：
@@ -108,15 +113,6 @@ python -m shushu_internship_tool.interview_pack \
 2. 先跑 `achievement_audit`，看成果提取、证据抽取、AI 风险提醒是否合理。
 3. 再跑 `resume_rank`，看哪些成果最适合当前目标岗位。
 4. 最后跑 `interview_pack`，把结果转成 STAR、项目介绍和面试问答。
-
-## 安装
-
-```bash
-cd shushu-internship-resume-optimizer
-python -m venv .venv
-. .venv/bin/activate
-python -m pip install -e ".[dev]"
-```
 
 ## CLI 用法
 
@@ -151,7 +147,7 @@ python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_ov
 - `resume_project_summary.md`：拿来继续人工压缩成正式简历版本
 - `project_intro.md / interview_qa.md`：拿来做项目介绍和面试前复盘
 
-更推荐的节奏是：先看 `overview`，再看 `resume_rank`，最后再用 `interview_pack` 产物练表达。
+更推荐的使用节奏是：先看 `overview`，再看 `resume_rank`，最后再用 `interview_pack` 产物练表达。
 
 ## 命令说明
 
@@ -238,6 +234,14 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 2. 用 `resume_project_summary.md` 做压缩版底稿
 3. 再手动确认数字、边界、职责范围和措辞
 
+## 当前状态
+
+项目仍在持续开发中。
+
+目前主要基于真实实习材料对部分链路做过验证，例如成果审计、简历排序、项目介绍、面试问答；知识层和部分边界场景仍需要更多测试样本。
+
+仓库里的不少规则和生成逻辑还需要更多真实材料继续打磨，欢迎体验、测试和提建议，一起把项目做得更稳。
+
 ## 设计原则
 
 - 不编造数字，没有稳定指标就明确标注“待补量化 / 待补证据”
@@ -262,14 +266,6 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 
 - `https://github.com/LiuMengxuan04/shushu-internship-tool`
 
-## 当前状态
-
-项目仍在持续开发中。
-
-目前主要基于真实实习材料对部分链路做过验证，例如成果审计、简历排序、项目介绍、面试问答；知识层和部分边界场景仍需要更多测试样本。
-
-仓库里的不少规则和生成逻辑还需要更多真实材料来继续打磨，欢迎体验、测试和提建议，一起把项目做得更稳。
-
 ## 参与贡献
 
 欢迎一起完善这个项目。
@@ -288,16 +284,3 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 - 任何明确不能对外传播的实习内容
 
 如果你想体验测试，建议优先使用脱敏后的材料，或者自己手动改写后的项目总结。
-
-## 兼容性
-
-为了降低迁移成本，旧命令仍然保留为兼容别名：
-
-- `shushu-repo-audit` -> `achievement_audit`
-- `shushu-candidate-score` -> `resume_rank`
-
-## 本地检查
-
-这个公开仓库不再默认提供私有测试样例；如果你本地还保留自己的测试集，可以继续运行 `pytest`。
-
-作为公开仓库的最小自检，建议直接跑上面的 `examples/minimal_input` demo 流程。

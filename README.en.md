@@ -4,24 +4,6 @@ Turn internship code repos, project notes, and business context into resume-read
 
 [简体中文](./README.md) · [English](./README.en.md) · [Contributing](./CONTRIBUTING.md) · [Release Notes](./RELEASE_NOTES.md)
 
-## Quick Links
-
-- Want the big picture first: see the workflow diagram below
-- Want to try it immediately: go to `3-Minute Demo`
-- Want to plug in your own materials: go to `CLI Usage`
-- Want the latest project summary: see [Release Notes](./RELEASE_NOTES.md)
-
-## At A Glance
-
-![workflow overview](./assets/workflow-overview.svg)
-
-## Highlights
-
-- multi-source input: code repos, project notes, and business docs
-- explicit risk surfacing for AI-heavy, repetitive, or overclaimed phrasing
-- dual-purpose outputs for self-review, resume compression, and interview prep
-- public demo inputs included for fast onboarding
-
 ## What This Project Is
 
 This repository is for interns and early-career candidates who want to turn ongoing work into clearer application materials.
@@ -39,11 +21,30 @@ The intended workflow is to audit raw materials first, verify the output manuall
 - separate long-form self-review notes from concise resume-facing project summaries
 - generate STAR drafts, project intros, interview Q&A, risk answers, and an application checklist
 
+## Quick Links
+
+- Want to see whether this project fits your use case: read `What This Project Is`
+- Want to understand what it actually does: read `Core Capabilities`
+- Want to try it immediately: go to `3-Minute Demo`
+- Want to plug in your own materials: go to `CLI Usage`
+- Want the latest project summary: see [Release Notes](./RELEASE_NOTES.md)
+
+## At A Glance
+
+![workflow overview](./assets/workflow-overview.svg)
+
+## Highlights
+
+- turn scattered internship materials into clearer resume-facing and interview-facing outputs
+- surface risks instead of only generating text, especially for AI-heavy, repetitive, or overclaimed phrasing
+- separate self-review outputs from concise resume-facing summaries
+- include a public minimal example input set for fast onboarding
+
 ## 3-Minute Demo
 
 The repository includes a small public example input set so you can validate the commands and output structure before plugging in your own local materials.
 
-This example is mainly a public demo input for understanding the structure and running the workflow end to end. For your own project write-up, quantified results, evidence quality, and claim boundaries are still critical.
+This example is mainly a public demo input for understanding the input structure and running the workflow end to end. For your own project write-up, quantified results, evidence quality, and claim boundaries are still critical.
 
 Example files:
 
@@ -52,7 +53,7 @@ Example files:
 - `examples/minimal_input/business_overview.md`
 - `examples/minimal_input/target_jd.txt`
 
-Quick run:
+Installation:
 
 ```bash
 cd shushu-internship-resume-optimizer
@@ -60,6 +61,8 @@ python -m venv .venv
 . .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
+
+Demo commands:
 
 PowerShell:
 
@@ -96,6 +99,8 @@ Suggested first files to inspect:
 
 ## Workflow
 
+Main flow:
+
 `JD + multi-source internship materials -> achievement_audit -> resume_rank -> interview_pack`
 
 Optional enhancement:
@@ -108,15 +113,6 @@ Suggested order:
 2. Run `achievement_audit` to inspect extracted achievements, evidence, and risk flags.
 3. Run `resume_rank` to see which achievements best match the target role.
 4. Run `interview_pack` to convert the results into interview material.
-
-## Installation
-
-```bash
-cd shushu-internship-resume-optimizer
-python -m venv .venv
-. .venv/bin/activate
-python -m pip install -e ".[dev]"
-```
 
 ## CLI Usage
 
@@ -234,6 +230,14 @@ For a minimal public template, see [examples/minimal_input](./examples/minimal_i
 
 In practice, it is usually better to feed the tool a longer raw project summary, then manually verify and compress the result, instead of pasting the long summary directly into a resume.
 
+## Current Status
+
+This project is still under active development.
+
+So far, parts of the workflow have been validated with real internship materials, especially the achievement audit, resume ranking, project intro, and interview Q&A flows. Some features, such as the knowledge-layer / knowledge-base related functions, still need broader testing.
+
+Many rules and generation strategies in this repository would benefit from more real materials and broader edge-case coverage. Feel free to try it with your own sanitized materials and share suggestions.
+
 ## Design Principles
 
 - do not fabricate metrics
@@ -258,20 +262,6 @@ Optional supporting capability:
 Thanks to the original project author for the upstream workflow and foundation. Upstream repository:
 
 - `https://github.com/LiuMengxuan04/shushu-internship-tool`
-
-## Current Status
-
-This project is still under active development.
-
-So far, parts of the workflow have been validated with real internship materials, especially the achievement audit, resume ranking, project intro, and interview Q&A flows. Some features, such as the knowledge-layer / knowledge-base related functions, still need broader testing.
-
-Many rules and generation strategies in this repository would benefit from more real materials and broader edge-case coverage. Feel free to try it with your own sanitized materials and share suggestions.
-
-## Local Checks
-
-This public repository no longer ships the private test samples by default. If you keep your own local tests, you can still run `pytest`.
-
-For a public smoke test, run the `examples/minimal_input` demo flow above.
 
 ## Contributing
 

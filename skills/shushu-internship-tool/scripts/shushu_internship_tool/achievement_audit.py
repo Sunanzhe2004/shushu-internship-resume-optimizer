@@ -366,9 +366,9 @@ def detect_business_context(text: str) -> str:
     primary = []
     secondary = []
     for sentence in sentence_candidates(text):
-        if any(keyword in sentence for keyword in ("PhoneGPT", "GUI Agent", "项目场景")):
+        if any(keyword in sentence for keyword in ("业务背景", "项目背景", "应用场景", "项目场景")):
             primary.append(sentence)
-        elif any(keyword in sentence for keyword in ("人工标注", "成本", "自动化", "轨迹")):
+        elif any(keyword in sentence for keyword in ("人工标注", "成本", "自动化", "流程", "数据", "任务")):
             secondary.append(sentence)
     hits = primary[:1] + secondary[:1]
     joined = "；".join(hits)
