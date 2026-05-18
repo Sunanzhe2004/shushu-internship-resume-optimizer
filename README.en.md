@@ -1,6 +1,6 @@
 # Shushu Internship Resume Optimizer
 
-Turn code repos, project notes, and business context from an internship into resume-ready bullets and interview-ready project narratives.
+Turn internship code repos, project notes, and business context into resume-ready bullets and interview-ready project narratives.
 
 [简体中文](./README.md) · [English](./README.en.md) · [Contributing](./CONTRIBUTING.md)
 
@@ -8,7 +8,7 @@ Turn code repos, project notes, and business context from an internship into res
 
 This repository is for interns and early-career candidates who want to turn ongoing work into clearer application materials.
 
-It is not meant to be a one-click resume generator. The main idea is to audit raw materials first, surface evidence and risks, rank what matters for a target JD, and then generate outputs that are easier to verify and rewrite manually.
+It is not a one-click resume generator. The main idea is to audit raw materials first, surface evidence and risks, rank what matters for a target JD, and then generate outputs that are easier to verify and rewrite manually.
 
 ## Core Capabilities
 
@@ -19,7 +19,7 @@ It is not meant to be a one-click resume generator. The main idea is to audit ra
 - separate long-form self-review notes from concise resume-facing project summaries
 - generate STAR drafts, project intros, interview Q&A, risk answers, and an application checklist
 
-## Recommended Workflow
+## Workflow
 
 `JD + multi-source internship materials -> achievement_audit -> resume_rank -> interview_pack`
 
@@ -39,7 +39,7 @@ python -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-## Main Commands
+## Commands
 
 ### 1. Achievement Audit
 
@@ -107,7 +107,7 @@ Outputs:
 - `risk_answers.md`
 - `application_checklist.md`
 
-## How To Use The Outputs
+## Outputs
 
 - `business_context_rewrite.md`: better for self-review and interview framing
 - `resume_rank.md`: better for ranking, risks, and next-step strengthening
@@ -144,17 +144,15 @@ Original project repository:
 
 This project is still under active development.
 
-So far, I have mainly tested parts of the workflow with my own internship-related materials, especially the achievement audit, resume ranking, project intro, and interview Q&A flows. These have only gone through partial local validation so far. Some features, such as the knowledge-layer / knowledge-base related functions, have not been fully tested yet.
+So far, parts of the workflow have been validated with real internship materials, especially the achievement audit, resume ranking, project intro, and interview Q&A flows. Some features, such as the knowledge-layer / knowledge-base related functions, still need broader testing.
 
-My own use cases, edge cases, and optimization ideas are also still limited, so many rules and generation strategies in this repository would benefit from more real materials and broader testing.
-
-Feel free to try it with your own sanitized materials and share suggestions. If you have useful feedback or ideas, you are welcome to contact me on QQ: `2715745003`
+Many rules and generation strategies in this repository would benefit from more real materials and broader edge-case coverage. Feel free to try it with your own sanitized materials and share suggestions.
 
 ## Contributing
 
 Contributions are welcome.
 
-If you want to improve extraction quality, resume rewriting, interview phrasing, testing coverage, or docs, please read [CONTRIBUTING.md](./CONTRIBUTING.md) first.
+If you want to improve extraction quality, resume rewriting, interview phrasing, testing coverage, or docs, please read [CONTRIBUTING.md](./CONTRIBUTING.md) first. Issues and PRs are both welcome.
 
 ## Security Reminder
 

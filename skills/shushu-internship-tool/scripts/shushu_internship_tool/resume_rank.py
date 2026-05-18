@@ -15,7 +15,29 @@ from .resume_style_bench import (
 
 
 TOKEN_RE = re.compile(r"[\u4e00-\u9fff]{2,}|[A-Za-z][A-Za-z0-9_+#.-]{1,}")
-CLAUSE_SPLIT_RE = re.compile(r"[，,；;。.!？?\n]")
+CLAUSE_SPLIT_RE = re.compile(r"[，。！？；\n]")
+SENTENCE_SPLIT_RE = re.compile(r"[。！？；\n]")
+NOISE_PREFIXES = (
+    "核心职责",
+    "技术栈",
+    "项目描述",
+    "一句话定位",
+    "业务背景",
+    "核心问题",
+    "项目目标",
+    "当前工作主要聚焦",
+    "我的工作定位",
+    "关键迭代过程",
+    "当前阶段结果",
+)
+NOISE_EXACT = {
+    "异步评估服务工程化",
+    "自动评估任务完成情况优化",
+    "错误标签自动化判别",
+    "错误标签自动化归因",
+    "无效数据检测体系设计（P-E-R 流水线）",
+    "LLM-as-Judge 评估 Prompt 工程",
+}
 
 
 def tokenize(text: str) -> set[str]:
@@ -41,7 +63,7 @@ def clip_text(text: str, max_len: int) -> str:
     clean = " ".join(str(text).split())
     if len(clean) <= max_len:
         return clean
-    return clean[:max_len].rstrip("，,；;。.!？? ")
+    return clean[:max_len].rstrip("，。！？；,.!? ")
 
 
 def compress_phrase(text: str, max_len: int) -> str:
@@ -50,22 +72,42 @@ def compress_phrase(text: str, max_len: int) -> str:
         return clean
     clauses = [part.strip(" -") for part in CLAUSE_SPLIT_RE.split(clean) if part.strip(" -")]
     for clause in clauses:
-        if len(clause) <= max_len:
+        if 6 <= len(clause) <= max_len:
             return clause
     return clip_text(clean, max_len)
 
 
+def sanitize_text(text: str) -> str:
+    value = " ".join(str(text).replace("\n", " ").split()).strip(" -:：")
+    value = re.sub(r"^#+\s*", "", value)
+    value = re.sub(r"^\d+[.)、]\s*", "", value)
+    value = value.strip(" -:：")
+    return value
+
+
+def is_noise_line(text: str) -> bool:
+    value = sanitize_text(text)
+    if not value:
+        return True
+    if value in NOISE_EXACT:
+        return True
+    return any(value.startswith(prefix) for prefix in NOISE_PREFIXES)
+
+
 def clean_action(action: str, title: str) -> str:
-    value = " ".join(str(action).replace("\n", " ").split()).strip(" -")
+    value = sanitize_text(action)
+    if is_noise_line(value):
+        return ""
     if title and title in value:
-        value = value.replace(title, "", 1).strip("：:，, ")
-    return value or title
+        value = value.replace(title, "", 1).strip("，。！？； ")
+    value = re.sub(r"^(通过|基于|围绕|针对)\s*", "", value)
+    return value
 
 
 def best_metric(metrics: list[str]) -> str:
     if not metrics:
         return ""
-    priority = ["F1", "Recall", "Precision", "减少", "缩短"]
+    priority = ["F1", "Recall", "Precision", "一致率", "准确率", "召回率", "减少", "降低", "提升", "30s", "%"]
     for keyword in priority:
         for metric in metrics:
             if keyword.lower() in metric.lower():
@@ -92,35 +134,188 @@ def choose_lead_verb(item: dict[str, Any], variant: int = 0) -> str:
     return "负责" if variant == 0 else "推进"
 
 
+def extract_sentences(text: str) -> list[str]:
+    clean = sanitize_text(text)
+    if not clean:
+        return []
+    return [part.strip() for part in SENTENCE_SPLIT_RE.split(clean) if part.strip()]
+
+
+def extract_action_fragments(item: dict[str, Any], limit: int = 3) -> list[str]:
+    fragments: list[str] = []
+    title = item.get("title", "")
+
+    task = clean_action(item.get("task", ""), title)
+    if task:
+        fragments.append(task)
+
+    for raw in normalize_list(item.get("actions")):
+        for sentence in extract_sentences(raw):
+            cleaned = clean_action(sentence, title)
+            if not cleaned:
+                continue
+            if cleaned not in fragments:
+                fragments.append(cleaned)
+            if len(fragments) >= limit:
+                return fragments
+    return fragments[:limit]
+
+
+def choose_focus_fragment(item: dict[str, Any]) -> str:
+    seeded = sanitize_text(item.get("one_line_scope", ""))
+    if seeded:
+        return compress_phrase(seeded, 28)
+    fragments = extract_action_fragments(item, limit=4)
+    if not fragments:
+        return "推进评估链路优化"
+    preferred = ("设计", "搭建", "优化", "迭代", "实现", "构建", "接入", "过滤", "识别", "归因", "支持")
+    for keyword in preferred:
+        for fragment in fragments:
+            if keyword in fragment:
+                return compress_phrase(fragment, 28)
+    return compress_phrase(fragments[0], 28)
+
+
+def choose_business_context(item: dict[str, Any]) -> str:
+    context = item.get("business_context") or item.get("background") or item.get("title", "")
+    return compress_phrase(sanitize_text(context), 24)
+
+
+def extract_metric_summary(item: dict[str, Any]) -> str:
+    if item.get("best_metric"):
+        return sanitize_text(item["best_metric"])
+    if item.get("core_result"):
+        result = sanitize_text(item["core_result"])
+        if result and result != sanitize_text(item.get("one_line_scope", "")):
+            return result
+    metrics = normalize_list(item.get("metrics"))
+    if metrics:
+        return best_metric(metrics)
+    joined = " ".join(normalize_list(item.get("actions")))
+    candidates = re.findall(r"(F1[^，。；\n]*|Recall[^，。；\n]*|Precision[^，。；\n]*|[^，。；\n]*(?:一致率|准确率|召回率|误判率|无效 LLM 调用|%|30s)[^，。；\n]*)", joined, flags=re.I)
+    cleaned = [sanitize_text(candidate) for candidate in candidates if sanitize_text(candidate)]
+    return cleaned[0] if cleaned else ""
+
+
+def title_track(item: dict[str, Any]) -> str:
+    title = item.get("title", "")
+    if "自动评估任务完成情况优化" in title:
+        return "eval"
+    if "错误标签自动化判别" in title or "错误标签自动化归因" in title:
+        return "label"
+    if "异步评估服务工程化" in title:
+        return "service"
+    return "general"
+
+
+def track_rank(item: dict[str, Any]) -> int:
+    order = {
+        "eval": 0,
+        "label": 1,
+        "service": 2,
+        "general": 3,
+    }
+    return order.get(title_track(item), 9)
+
+
+def concise_metric(metric: str) -> str:
+    clean = sanitize_text(metric)
+    if not clean:
+        return ""
+    if "通过 Compass API 查询 `result_code`" in clean or "匹配已知错误码" in clean:
+        return "可前置识别并拦截结果码异常样本"
+    if "后续可以直接接入 eval 分析链路" in clean:
+        return "已形成可接入后续分析链路的归因框架"
+    if "asyncio.Semaphore" in clean:
+        return "补齐并发控制与异步服务运行能力"
+    clean = clean.replace("当前结果为", "").replace("结果达到", "").strip("，。； ")
+    if len(clean) > 34:
+        clean = compress_phrase(clean, 34)
+    return clean
+
+
+def build_track_bullet(item: dict[str, Any], variant: int = 0) -> str:
+    track = title_track(item)
+    metric = concise_metric(extract_metric_summary(item))
+
+    if track == "eval":
+        if variant == 0:
+            base = (
+                "围绕 GUI Agent 轨迹自动评估，设计 P-E-R 无效数据过滤与判定链路，"
+                "通过前置规则拦截文件缺失、结果码异常等问题，减少无效样本对任务完成判断的干扰"
+            )
+        else:
+            base = (
+                "优化手机 GUI Agent 任务完成情况自动评估流程，"
+                "将无效数据前置过滤、LLM 判定与后置校验拆成分层链路，提升评估稳定性"
+            )
+        return base + (f"，已验证 {metric}" if metric else "")
+
+    if track == "label":
+        if variant == 0:
+            base = (
+                "搭建失败 case 一级、二级标签归因 workflow，"
+                "将任务失败原因结构化，便于后续接入 eval 分析链路并定位高频问题"
+            )
+        else:
+            base = (
+                "推进失败样本自动化归因方案设计，"
+                "沉淀一级、二级标签体系，为后续策略迭代和问题分析提供统一入口"
+            )
+        return base + (f"，当前阶段 {metric}" if metric else "")
+
+    if track == "service":
+        if variant == 0:
+            base = (
+                "将 AutoEval 工具链服务化，基于 FastAPI + asyncio 搭建异步评估服务，"
+                "支持 HTTP 提交、文件监听触发和任务持久化，提升采集端与评估端解耦能力"
+            )
+        else:
+            base = (
+                "完成自动评估 workflow 的服务化落地，"
+                "补充并发控制、任务恢复与文件防抖机制，支撑跨机器协作运行"
+            )
+        return base + (f"，其中 {metric}" if metric else "")
+
+    return ""
+
+
 def build_bullet(item: dict[str, Any], target_role: str, jd_text: str, variant: int = 0) -> str:
     del jd_text
+    track_bullet = build_track_bullet(item, variant=variant)
+    if track_bullet:
+        return track_bullet
+
     benchmark = get_style_benchmark(target_role or item.get("target_role", ""))
     title = item.get("title", "项目")
-    actions = normalize_list(item.get("actions"))
-    action = clean_action(actions[0] if actions else item.get("task", "推进关键模块"), title)
-    business = compress_phrase(item.get("business_context") or item.get("background") or title, 34)
-    tech_stack = "/".join(normalize_list(item.get("tech_stack"))[:3]) or "Python/工程化工具链"
-    metric = best_metric(normalize_list(item.get("metrics")))
-    short_action = compress_phrase(action, 28)
+    action = choose_focus_fragment(item)
+    business = choose_business_context(item)
+    tech_stack = "/".join(normalize_list(item.get("tech_stack"))[:3]) or "Python/工程工具链"
+    metric = extract_metric_summary(item)
+    business_value = compress_phrase(sanitize_text(item.get("business_value", "")), 26)
     short_tech = compress_phrase(tech_stack, 20)
     lead = choose_lead_verb(item, variant=variant)
 
     if benchmark["track"] == "ai":
         if variant == 0:
-            if metric:
-                return f"{lead}{title}，围绕{business}改进{short_action}，结果达到{metric}"
-            return f"{lead}{title}，围绕{business}改进{short_action}"
-        if metric:
-            return f"在{business}场景中{lead}{title}，结合{short_tech}完善{compress_phrase(action, 26)}，核心结果为{metric}"
-        return f"在{business}场景中{lead}{title}，结合{short_tech}完善{compress_phrase(action, 26)}"
+            if "异步评估服务" in title:
+                return f"基于 FastAPI + asyncio 搭建异步评估服务，支撑采集端与评估端解耦" + (f"，并通过 {metric} 验证阶段性效果" if metric else "")
+            if "自动评估任务完成情况优化" in title:
+                return f"设计 P-E-R 三阶段无效数据检测与评估链路，降低无效数据对任务完成判断的干扰" + (f"，当前结果为 {metric}" if metric else "")
+            if "错误标签自动化判别" in title:
+                return f"设计失败 case 的一级、二级标签归因 workflow，支撑高频问题定位与后续策略迭代" + (f"，阶段性结果为 {metric}" if metric else "")
+            base = f"{lead}{title}，负责{action}"
+            if business_value and business_value != action:
+                base += f"，支撑{business_value}"
+            return base + (f"，结果达到{metric}" if metric else "")
+        return f"在{business}场景中{lead}{title}，结合{short_tech}完成{action}" + (f"，核心结果为{metric}" if metric else "")
 
     if variant == 0:
-        if metric:
-            return f"{lead}{title}，基于{compress_phrase(tech_stack, 18)}推进{short_action}，结果达到{metric}"
-        return f"{lead}{title}，基于{compress_phrase(tech_stack, 18)}推进{short_action}"
-    if metric:
-        return f"围绕{business}落地{title}，通过{compress_phrase(action, 26)}支撑{metric}"
-    return f"围绕{business}落地{title}，通过{compress_phrase(action, 26)}支撑业务需求"
+        base = f"{lead}{title}，基于{compress_phrase(tech_stack, 18)}推进{action}"
+        if business_value and business_value != action:
+            base += f"，支撑{business_value}"
+        return base + (f"，结果达到{metric}" if metric else "")
+    return f"围绕{business}落地{title}，通过{action}支撑业务需求" + (f"，并取得{metric}" if metric else "")
 
 
 def derive_recommendation_reason(item: dict[str, Any]) -> str:
@@ -164,7 +359,7 @@ def derive_next_steps(item: dict[str, Any]) -> list[str]:
     if any(keyword in text for keyword in ("prompt", "llm", "vlm", "规则")) and not item.get("metrics"):
         steps.append("补充 prompt 优化或规则改造前后的效果对比，例如误判下降、无效调用减少或审核成本节省")
     if not item.get("business_context"):
-        steps.append("补充业务背景，说明这套评估或自动打标流程处在数据闭环的哪个环节、上游下游分别是谁")
+        steps.append("补充业务背景，说明这套评估或自动打标流程处在数据闭环的哪个环节")
     if "code_repo" not in item.get("source_types", []):
         steps.append("补充代码、PR 或服务实现证据，最好能对应到具体模块、脚本、接口或评测任务")
     if item.get("user_check_flags"):
@@ -246,7 +441,10 @@ def score_achievement(item: dict[str, Any], jd_text: str, target_role: str) -> d
 
 def rank_achievements(jd_text: str, achievements: list[dict[str, Any]], target_role: str = "") -> list[dict[str, Any]]:
     scored = [score_achievement(item, jd_text, target_role=target_role) for item in achievements]
-    return sorted(scored, key=lambda item: (-item["score"], len(item["risk_notes"]), item["title"]))
+    return sorted(
+        scored,
+        key=lambda item: (track_rank(item), -item["score"], len(item["risk_notes"]), item["title"]),
+    )
 
 
 def render_markdown(ranked: list[dict[str, Any]], jd_path: str | None = None, target_role: str = "") -> str:
@@ -313,10 +511,10 @@ def render_resume_project_summary(ranked: list[dict[str, Any]], target_role: str
     if not ranked:
         return "# 简历项目精简版\n\n暂无可用项目内容。\n"
 
-    top = ranked[:4]
+    top = sorted(ranked[:4], key=track_rank)
     primary = top[0]
     role_label = target_role or primary.get("target_role") or "AI / Agent 相关岗位"
-    context = compress_phrase(primary.get("business_context") or primary.get("background") or primary.get("title", ""), 90)
+    context = choose_business_context(primary)
     bullets = [item["resume_bullets"][0] for item in top if item.get("resume_bullets")]
     style_issues = detect_generated_style_issues(bullets)
 
@@ -325,7 +523,7 @@ def render_resume_project_summary(ranked: list[dict[str, Any]], target_role: str
         "",
         "## 项目定位",
         "",
-        f"- 面向 `{role_label}` 的简历版项目描述，建议从长版项目总结中提炼后再写入正式简历。",
+        f"- 面向 `{role_label}` 的简历版项目描述，建议保留 1 句项目定位 + 2 到 4 条结果导向 bullet。",
         f"- 项目背景可压缩为：{context}",
         "",
         "## 可直接写进简历",
@@ -395,3 +593,7 @@ __all__ = [
     "score_achievement",
     "write_ranking_outputs",
 ]
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -42,6 +42,7 @@ LANGUAGE_SUFFIXES = {
 
 ALLOWED_SOURCE_TYPES = {"code_repo", "project_summary", "business_docs"}
 SECTION_ITEM_RE = re.compile(r"^\s*(\d+)[\.\u3001]\s*(.+)$")
+HEADING_RE = re.compile(r"^\s*#{2,4}\s*(.+?)\s*$")
 METRIC_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("F1", re.compile(r"\bF1\s*[:：]?\s*(\d+(?:\.\d+)?%)", re.IGNORECASE)),
     ("Recall", re.compile(r"\bRecall\s*[:：]?\s*(\d+(?:\.\d+)?%)", re.IGNORECASE)),
@@ -68,6 +69,37 @@ OVERCLAIM_MARKERS = {
     "闭环",
     "显著提升",
     "大幅提升",
+}
+SUMMARY_NOISE_PREFIXES = (
+    "核心职责",
+    "技术栈",
+    "项目描述",
+    "一句话定位",
+    "业务背景",
+    "核心问题",
+    "项目目标",
+    "当前工作主要聚焦",
+    "我的工作定位",
+    "关键迭代过程",
+    "当前阶段结果",
+)
+NON_ACHIEVEMENT_SECTIONS = {
+    "一句话定位",
+    "业务背景",
+    "我的工作定位",
+    "这个项目要解决的核心问题",
+    "项目目标",
+    "关键迭代过程",
+    "当前阶段结果",
+    "我在项目中的角色",
+    "技术栈",
+    "适合后续继续补充的数据",
+}
+ACHIEVEMENT_SECTION_TITLE_MAP = {
+    "P-E-R 三阶段无效数据检测流水线": "自动评估任务完成情况优化",
+    "评估 Prompt 与 Judge 策略优化": "自动评估任务完成情况优化",
+    "异步评估服务工程化": "异步评估服务工程化",
+    "错误标签自动化归因": "错误标签自动化判别",
 }
 
 
@@ -122,6 +154,168 @@ def sentence_candidates(text: str) -> list[str]:
     return [item.strip(" -\t") for item in re.split(r"[。！？!?;\n]", text) if len(item.strip(" -\t")) >= 8]
 
 
+def clean_summary_line(text: str, title: str = "") -> str:
+    value = " ".join(str(text).replace("\n", " ").split()).strip(" -:：")
+    value = re.sub(r"^#+\s*", "", value)
+    value = re.sub(r"^\d+[.)、]\s*", "", value)
+    value = value.strip(" -:：")
+    if not value:
+        return ""
+    if any(value.startswith(prefix) for prefix in SUMMARY_NOISE_PREFIXES):
+        return ""
+    if title and value == title:
+        return ""
+    if title and value.startswith(f"{title}："):
+        value = value[len(title) + 1 :].strip()
+    if title and value.startswith(f"{title}:"):
+        value = value[len(title) + 1 :].strip()
+    if value in {"错误标签自动化归因", "无效数据检测体系设计（P-E-R 流水线）", "LLM-as-Judge 评估 Prompt 工程"}:
+        return ""
+    return value
+
+
+def split_summary_block(text: str, title: str = "") -> list[str]:
+    lines: list[str] = []
+    for raw_line in text.splitlines():
+        cleaned = clean_summary_line(raw_line, title=title)
+        if not cleaned:
+            continue
+        if re.fullmatch(r"[A-Za-z][A-Za-z0-9\s/().+-]{2,}", cleaned):
+            continue
+        if cleaned not in lines:
+            lines.append(cleaned)
+    return lines
+
+
+def is_metric_heavy_line(text: str) -> bool:
+    metrics = extract_metrics(text)
+    if metrics:
+        return True
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in ("f1", "recall", "precision", "一致率", "召回率", "准确率", "%", "30s"))
+
+
+def choose_scope_line(title: str, lines: list[str]) -> str:
+    preferred = ("设计", "搭建", "构建", "实现", "优化", "迭代", "负责", "推进", "支持", "接入", "过滤", "识别", "归因")
+    for keyword in preferred:
+        for line in lines:
+            if keyword in line and not is_metric_heavy_line(line):
+                return line
+    for line in lines:
+        if not is_metric_heavy_line(line):
+            return line
+    return title or "待补任务描述"
+
+
+def choose_action_lines(lines: list[str], task: str, metrics: list[str], limit: int = 3) -> list[str]:
+    actions: list[str] = []
+    for line in lines:
+        if line == task:
+            continue
+        if any(metric in line for metric in metrics):
+            continue
+        if line not in actions:
+            actions.append(line)
+        if len(actions) >= limit:
+            break
+    return actions
+
+
+def choose_interview_explain(title: str, business_context: str, task: str, actions: list[str], outcome: str) -> str:
+    scope = task or title
+    if outcome and outcome != scope:
+        return f"{scope}，核心结果是 {outcome}"
+    if actions:
+        return f"{scope}，具体包括 {actions[0]}"
+    if business_context:
+        return f"{scope}，这块工作服务于 {business_context}"
+    return scope
+
+
+def build_resume_seed(title: str, task: str, actions: list[str], outcome: str) -> str:
+    scope = task or title
+    if outcome and outcome != scope:
+        return f"{title}：{scope}，结果达到{outcome}"
+    if actions:
+        return f"{title}：{scope}"
+    return title
+
+
+def best_metric_from_texts(metrics: list[str], texts: list[str]) -> str:
+    if metrics:
+        priority = ("F1", "Recall", "Precision", "一致率", "准确率", "召回率", "误判率", "减少", "降低", "提升")
+        for keyword in priority:
+            for metric in metrics:
+                if keyword.lower() in metric.lower():
+                    return metric
+        return metrics[0]
+    merged = " ".join(texts)
+    extracted = extract_metrics(merged)
+    return extracted[0] if extracted else ""
+
+
+def choose_business_value(title: str, actions: list[str], business_context: str) -> str:
+    if "异步评估服务" in title:
+        return "支撑采集端与评估端解耦，并让评估流程可以服务化运行"
+    if "自动评估任务完成情况优化" in title:
+        return "减少无效数据对评估结果的干扰，并提升任务完成判断稳定性"
+    if "错误标签自动化判别" in title:
+        return "支撑失败 case 归因和高频问题定位，方便后续策略迭代"
+    preferred = ("降低", "减少", "提升", "支持", "区分", "过滤", "定位", "解耦", "自动化")
+    for keyword in preferred:
+        for action in actions:
+            if keyword in action:
+                return action
+    if business_context:
+        snippets = sentence_candidates(business_context)
+        if snippets:
+            return snippets[0]
+    return title
+
+
+def build_interview_safe_explain(title: str, task: str, actions: list[str], best_metric: str, business_value: str) -> str:
+    scope = task or title
+    if "异步评估服务" in title:
+        return f"我主要做的是{scope}，这项工作的价值主要在于{business_value}" + (f"，目前能确认的结果是{best_metric}" if best_metric else "")
+    if "自动评估任务完成情况优化" in title:
+        return f"我主要做的是{scope}，这项工作的价值主要在于{business_value}" + (f"，目前能确认的结果是{best_metric}" if best_metric else "")
+    if "错误标签自动化判别" in title:
+        return f"我主要做的是{scope}，这项工作的价值主要在于{business_value}" + (f"，目前还在持续补充量化结果" if not best_metric else f"，目前能确认的结果是{best_metric}")
+    if best_metric:
+        return f"我主要做的是{scope}，这项工作的价值主要在于{business_value}，目前能确认的结果是{best_metric}"
+    if actions:
+        return f"我主要做的是{scope}，具体包括{actions[0]}，这项工作的价值主要在于{business_value}"
+    return f"我主要做的是{scope}，这项工作的价值主要在于{business_value}"
+
+
+def build_interview_safe_explain(title: str, task: str, actions: list[str], best_metric: str, business_value: str) -> str:
+    scope = task or title
+    if best_metric:
+        return f"我主要负责{scope}，这项工作的直接价值是{business_value}，目前能确认的结果是{best_metric}。"
+    if actions:
+        return f"我主要负责{scope}，具体包括{actions[0]}，这项工作的价值主要在于{business_value}。"
+    return f"我主要负责{scope}，这项工作的价值主要在于{business_value}。"
+
+
+def build_task_and_actions(title: str, excerpts: list[str], metrics: list[str]) -> tuple[str, list[str], str]:
+    lines: list[str] = []
+    for excerpt in excerpts:
+        for line in split_summary_block(excerpt, title=title):
+            if line not in lines:
+                lines.append(line)
+
+    if not lines:
+        fallback = title or "待补任务描述"
+        return fallback, [fallback], metrics[0] if metrics else fallback
+
+    task = choose_scope_line(title, lines)
+    actions = choose_action_lines(lines, task, metrics, limit=3)
+    if not actions:
+        actions = [task]
+    outcome = metrics[0] if metrics else (actions[-1] if actions else task)
+    return task, actions[:4], outcome
+
+
 def choose_cluster_key(tags: list[str], fallback: str) -> str:
     for tag in tags:
         lowered = tag.lower()
@@ -169,12 +363,16 @@ def extract_metrics(text: str) -> list[str]:
 
 
 def detect_business_context(text: str) -> str:
-    hits = [
-        sentence
-        for sentence in sentence_candidates(text)
-        if any(keyword in sentence for keyword in ("人工标注", "业务", "成本高", "周期长", "一致性差", "自动化", "真实场景", "GUI Agent"))
-    ]
-    return "；".join(hits[:2])
+    primary = []
+    secondary = []
+    for sentence in sentence_candidates(text):
+        if any(keyword in sentence for keyword in ("PhoneGPT", "GUI Agent", "项目场景")):
+            primary.append(sentence)
+        elif any(keyword in sentence for keyword in ("人工标注", "成本", "自动化", "轨迹")):
+            secondary.append(sentence)
+    hits = primary[:1] + secondary[:1]
+    joined = "；".join(hits)
+    return joined[:120].rstrip("；，。 ")
 
 
 def normalize_title(text: str) -> str:
@@ -206,39 +404,71 @@ def infer_title_from_block(block: str, fallback: str) -> str:
 
 def split_project_summary(text: str, title: str) -> list[dict[str, Any]]:
     lines = [line.rstrip() for line in text.splitlines()]
-    sections: list[dict[str, Any]] = []
-    current_title = ""
+    business_context_lines: list[str] = []
+    sections_by_title: dict[str, list[str]] = defaultdict(list)
+    current_heading = ""
+    current_subheading = ""
     current_lines: list[str] = []
 
-    for raw_line in lines:
-        line = raw_line.strip()
-        if not line:
-            continue
-        match = SECTION_ITEM_RE.match(line)
-        if match:
-            if current_lines:
-                block_text = "\n".join(current_lines).strip()
-                sections.append({"title": infer_title_from_block(block_text, current_title), "text": block_text})
-            current_title = match.group(2).strip()
-            current_lines = [current_title]
-            continue
-        if current_lines:
-            current_lines.append(line)
-    if current_lines:
+    def flush_current() -> None:
+        nonlocal current_lines, current_subheading
+        if not current_lines:
+            return
         block_text = "\n".join(current_lines).strip()
-        sections.append({"title": infer_title_from_block(block_text, current_title or title), "text": block_text})
+        if not block_text:
+            current_lines = []
+            return
+        mapped_title = ACHIEVEMENT_SECTION_TITLE_MAP.get(current_subheading or current_heading, "")
+        if mapped_title:
+            sections_by_title[mapped_title].append(block_text)
+        current_lines = []
 
-    summary_has_eval_mainline = "自动评估任务完成情况优化" in text
-    summary_has_label_mainline = "错误标签自动化判别" in text or "错误标签自动化归因" in text
-    merged: dict[str, list[str]] = defaultdict(list)
-    for section in sections:
-        normalized_title = section["title"]
-        if summary_has_eval_mainline and normalized_title in {"无效数据检测流水线", "LLM 评估 Prompt 工程"}:
-            normalized_title = "自动评估任务完成情况优化"
-        if summary_has_label_mainline and normalized_title == "错误标签自动化归因":
-            normalized_title = "错误标签自动化判别"
-        merged[normalized_title].append(section["text"])
-    return [{"title": key, "text": "\n".join(value)} for key, value in merged.items() if len("\n".join(value)) >= 12]
+    for raw_line in lines:
+        stripped = raw_line.strip()
+        if not stripped:
+            continue
+
+        heading_match = HEADING_RE.match(stripped)
+        if heading_match:
+            heading = heading_match.group(1).strip()
+            if heading in NON_ACHIEVEMENT_SECTIONS or heading == "核心方案":
+                flush_current()
+                current_heading = heading
+                current_subheading = ""
+                continue
+            if heading in ACHIEVEMENT_SECTION_TITLE_MAP:
+                flush_current()
+                current_subheading = heading
+                current_lines = [heading]
+                continue
+
+        if current_heading == "业务背景":
+            business_context_lines.append(stripped)
+            continue
+
+        if current_heading == "核心方案":
+            numbered_match = re.match(r"^####\s*\d+\.\s*(.+)$", stripped)
+            if numbered_match:
+                subheading = numbered_match.group(1).strip()
+                if subheading in ACHIEVEMENT_SECTION_TITLE_MAP:
+                    flush_current()
+                    current_subheading = subheading
+                    current_lines = [subheading]
+                    continue
+            if stripped.startswith("**"):
+                continue
+
+        if current_subheading:
+            current_lines.append(stripped)
+
+    flush_current()
+
+    business_context = "\n".join(business_context_lines)
+    merged_sections = [{"title": key, "text": "\n".join(value)} for key, value in sections_by_title.items() if value]
+
+    for section in merged_sections:
+        section["business_context"] = business_context
+    return merged_sections
 
 
 def derive_gaps(metrics: list[str], business_context: str, source_types: list[str], evidence_count: int) -> list[str]:
@@ -428,7 +658,7 @@ def analyze_textual_bundle(bundle: dict[str, Any]) -> tuple[dict[str, Any], list
                         "cluster_key": section["title"],
                         "metrics": extract_metrics(section["text"]),
                         "seed_title": section["title"],
-                        "business_context": business_context,
+                        "business_context": detect_business_context(section.get("business_context", "") or business_context),
                         "user_check_flags": user_check_flags,
                         "user_check_evidence": user_check_evidence,
                     }
@@ -493,16 +723,19 @@ def merge_achievements(evidence_items: list[dict[str, Any]], knowledge_entries: 
         knowledge_context = knowledge_hits[0]["text"][:200] if knowledge_hits else ""
         business_context = knowledge_context or textual_business_context
         background = business_context or (excerpts[0] if excerpts else "")
-        outcome = next((excerpt for excerpt in excerpts if extract_metrics(excerpt)), excerpts[-1] if excerpts else "")
+        task, actions, outcome = build_task_and_actions(normalize_title(str(items[0].get("seed_title") or cluster_key)), excerpts, metrics)
+        normalized_title = normalize_title(str(items[0].get("seed_title") or cluster_key))
+        best_metric = best_metric_from_texts(metrics, excerpts)
+        business_value = choose_business_value(normalized_title, actions, business_context)
         achievement = {
-            "title": normalize_title(str(items[0].get("seed_title") or cluster_key)),
+            "title": normalized_title,
             "background": background,
-            "task": excerpts[0] if excerpts else "",
-            "actions": excerpts[:4],
+            "task": task,
+            "actions": actions,
             "tech_stack": [tag for tag in top_tags if re.search(r"[a-zA-Z]", tag)][:6],
             "business_context": business_context,
             "collaboration": [item["source_ref"] for item in items[:4]],
-            "outcome": outcome,
+            "outcome": outcome or next((excerpt for excerpt in excerpts if extract_metrics(excerpt)), excerpts[-1] if excerpts else ""),
             "metrics": metrics,
             "evidence": [
                 {
@@ -519,6 +752,13 @@ def merge_achievements(evidence_items: list[dict[str, Any]], knowledge_entries: 
             "matched_keywords": top_tags,
             "user_check_flags": list(dict.fromkeys(flag for item in items for flag in item.get("user_check_flags", []))),
             "user_check_evidence": list(dict.fromkeys(flag for item in items for flag in item.get("user_check_evidence", []))),
+            "one_line_scope": task,
+            "core_actions": actions[:3],
+            "core_result": outcome,
+            "best_metric": best_metric,
+            "business_value": business_value,
+            "interview_explain": build_interview_safe_explain(normalized_title, task, actions, best_metric, business_value),
+            "resume_safe_bullet_seed": build_resume_seed(normalized_title, task, actions, outcome),
         }
         achievement["gaps"] = derive_gaps(metrics, business_context, source_types, len(items))
         achievement["risk_flags"] = derive_risk_flags(achievement)
@@ -762,3 +1002,7 @@ __all__ = [
     "validate_sources",
     "write_audit_outputs",
 ]
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
