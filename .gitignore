@@ -22,6 +22,7 @@ checkpoints/
 artifacts/
 *.log
 tmp_manual_eval/
+tests/
 
 # Local editor/system files
 .DS_Store
