@@ -21,11 +21,11 @@
       .stage { fill: #ffffff; stroke: #7fb3ff; stroke-width: 2.5; rx: 20; ry: 20; }
       .accent { fill: #e8f2ff; stroke: #7fb3ff; stroke-width: 2; rx: 16; ry: 16; }
       .output { fill: #f8fffb; stroke: #91c8a1; stroke-width: 2; rx: 16; ry: 16; }
-      .arrow { stroke: #4b79b6; stroke-width: 3; fill: none; marker-end: url(#arrow); }
-      .soft { stroke: #6c8db8; stroke-width: 2.5; stroke-dasharray: 7 6; fill: none; marker-end: url(#arrow); }
+      .arrow { stroke: #6b90c3; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+      .soft { stroke: #88a3c6; stroke-width: 1.4; stroke-dasharray: 5 6; fill: none; marker-end: url(#arrow); }
     </style>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
-      <path d="M0,0 L10,5 L0,10 z" fill="#4b79b6"/>
+    <marker id="arrow" markerWidth="5.5" markerHeight="5.5" refX="4.8" refY="2.75" orient="auto">
+      <path d="M0,0 L5.5,2.75 L0,5.5 z" fill="#6b90c3"/>
     </marker>
   </defs>
 
