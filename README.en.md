@@ -23,8 +23,8 @@ The intended workflow is to audit raw materials first, verify the output manuall
 
 ## Quick Links
 
-- Want to see whether this project fits your use case: read `What This Project Is`
-- Want to understand what it actually does: read `Core Capabilities`
+- Want to see whether it fits your use case: read `What This Project Is`
+- Want to understand what it does: read `Core Capabilities`
 - Want to try it immediately: go to `3-Minute Demo`
 - Want to plug in your own materials: go to `CLI Usage`
 - Want the latest project summary: see [Release Notes](./RELEASE_NOTES.md)
@@ -35,7 +35,7 @@ The intended workflow is to audit raw materials first, verify the output manuall
 
 ## Highlights
 
-- turn scattered internship materials into clearer resume-facing and interview-facing outputs
+- turn scattered internship materials into clearer resume and interview outputs
 - surface risks instead of only generating text, especially for AI-heavy, repetitive, or overclaimed phrasing
 - separate self-review outputs from concise resume-facing summaries
 - include a public minimal example input set for fast onboarding
