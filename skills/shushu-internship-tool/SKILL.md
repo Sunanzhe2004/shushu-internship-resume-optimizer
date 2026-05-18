@@ -3,7 +3,7 @@ name: shushu-internship-tool
 description: "Use when an AI assistant helps users turn ongoing internship work into resume-ready and interview-ready material from code repos, project summaries, and business documents."
 ---
 
-# Shushu 实习成果转简历工作流
+# Shushu 实习材料整理工作流
 
 默认输出中文，保留英文技术术语、命令和仓库名。
 
@@ -12,12 +12,12 @@ description: "Use when an AI assistant helps users turn ongoing internship work 
 把用户当前实习里的零散材料整理成：
 
 - 可写进简历的成果项
-- 面向 JD 的 bullet 改写
+- 面向 JD 的简历 bullet 改写
 - 可追溯证据
 - 业务背景说明
 - 面试讲述包
 
-## Intake
+## 输入信息
 
 优先收集：
 
@@ -101,9 +101,9 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 - 业务追问是否能落回证据
 - 指标口径是否稳妥
 
-## Output Style
+## 输出风格
 
-- 优先产出可直接投递的内容
+- 优先产出可直接投递、可继续手改的内容
 - 没有稳定指标时，不编造数字
 - 对不同岗位方向使用不同表达风格
 - 少写空泛 buzzword，多写职责、动作、结果、证据和业务价值

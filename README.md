@@ -23,6 +23,10 @@
 
 `JD + 多源实习材料 -> achievement_audit -> resume_rank -> interview_pack`
 
+可选增强：
+
+`business_docs -> doc_knowledge`
+
 建议按下面顺序使用：
 
 1. 准备 `sources.json`，把代码仓库、项目总结、业务背景文档整理进去。
@@ -95,7 +99,7 @@ python -m shushu_internship_tool.doc_knowledge --docs tests/fixtures/intern_mate
 ### 4. 面试包
 
 ```bash
-python -m shushu_internship_tool.interview_pack --achievements reports/audit/achievement_audit.json --ranked reports/rank/resume_rank.json --target-role backend --out reports/interview
+python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role backend --out reports/interview
 ```
 
 输出：
@@ -137,7 +141,11 @@ python -m shushu_internship_tool.interview_pack --achievements reports/audit/ach
 
 当前主流程为：
 
-`achievement_audit -> resume_rank -> doc_knowledge -> interview_pack`
+`achievement_audit -> resume_rank -> interview_pack`
+
+可选增强能力：
+
+`doc_knowledge`
 
 原始项目仓库：
 

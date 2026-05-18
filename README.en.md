@@ -23,6 +23,10 @@ It is not a one-click resume generator. The main idea is to audit raw materials 
 
 `JD + multi-source internship materials -> achievement_audit -> resume_rank -> interview_pack`
 
+Optional enhancement:
+
+`business_docs -> doc_knowledge`
+
 Suggested order:
 
 1. Prepare a `sources.json` file with repo paths, project notes, and business docs.
@@ -95,7 +99,7 @@ Supported modes:
 ### 4. Interview Pack
 
 ```bash
-python -m shushu_internship_tool.interview_pack --achievements reports/audit/achievement_audit.json --ranked reports/rank/resume_rank.json --target-role backend --out reports/interview
+python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role backend --out reports/interview
 ```
 
 Outputs:
@@ -134,7 +138,11 @@ This repository is a focused reorganization of earlier capabilities already pres
 
 The current primary flow is:
 
-`achievement_audit -> resume_rank -> doc_knowledge -> interview_pack`
+`achievement_audit -> resume_rank -> interview_pack`
+
+Optional supporting capability:
+
+`doc_knowledge`
 
 Original project repository:
 
