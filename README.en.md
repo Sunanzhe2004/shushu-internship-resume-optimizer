@@ -40,6 +40,23 @@ The intended workflow is to audit raw materials first, verify the output manuall
 - separate self-review outputs from concise resume-facing summaries
 - include a public minimal example input set for fast onboarding
 
+## Workflow
+
+Main flow:
+
+`JD + multi-source internship materials -> achievement_audit -> resume_rank -> interview_pack`
+
+Optional enhancement:
+
+`business_docs -> doc_knowledge`
+
+Suggested order:
+
+1. Prepare a `sources.json` file with repo paths, project notes, and business docs.
+2. Run `achievement_audit` to inspect extracted achievements, evidence, and risk flags.
+3. Run `resume_rank` to see which achievements best match the target role.
+4. Run `interview_pack` to convert the results into interview material.
+
 ## 3-Minute Demo
 
 The repository includes a small public example input set so you can validate the commands and output structure before plugging in your own local materials.
@@ -96,23 +113,6 @@ Suggested first files to inspect:
 - `demo_reports/rank/resume_project_summary.md`
 - `demo_reports/interview/project_intro.md`
 - `demo_reports/interview/interview_qa.md`
-
-## Workflow
-
-Main flow:
-
-`JD + multi-source internship materials -> achievement_audit -> resume_rank -> interview_pack`
-
-Optional enhancement:
-
-`business_docs -> doc_knowledge`
-
-Suggested order:
-
-1. Prepare a `sources.json` file with repo paths, project notes, and business docs.
-2. Run `achievement_audit` to inspect extracted achievements, evidence, and risk flags.
-3. Run `resume_rank` to see which achievements best match the target role.
-4. Run `interview_pack` to convert the results into interview material.
 
 ## CLI Usage
 

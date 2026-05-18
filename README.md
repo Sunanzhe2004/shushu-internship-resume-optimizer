@@ -40,6 +40,23 @@
 - 区分两种使用场景：同时给自己复盘版和简历压缩版输出
 - 上手成本低：仓库内自带一套可公开提交的最小示例输入
 
+## 工作流
+
+主流程：
+
+`JD + 多源实习材料 -> achievement_audit -> resume_rank -> interview_pack`
+
+可选增强：
+
+`business_docs -> doc_knowledge`
+
+建议按下面顺序使用：
+
+1. 准备 `sources.json`，把代码仓库、项目总结、业务背景文档整理进去。
+2. 先跑 `achievement_audit`，看成果提取、证据抽取、AI 风险提醒是否合理。
+3. 再跑 `resume_rank`，看哪些成果最适合当前目标岗位。
+4. 最后跑 `interview_pack`，把结果转成 STAR、项目介绍和面试问答。
+
 ## 3 分钟试跑
 
 仓库内提供了一套可公开提交的最小示例输入，适合先验证命令和输出结构，再替换成你自己的本地材料。
@@ -96,23 +113,6 @@ python -m shushu_internship_tool.interview_pack \
 - `demo_reports/rank/resume_project_summary.md`
 - `demo_reports/interview/project_intro.md`
 - `demo_reports/interview/interview_qa.md`
-
-## 工作流
-
-主流程：
-
-`JD + 多源实习材料 -> achievement_audit -> resume_rank -> interview_pack`
-
-可选增强：
-
-`business_docs -> doc_knowledge`
-
-建议按下面顺序使用：
-
-1. 准备 `sources.json`，把代码仓库、项目总结、业务背景文档整理进去。
-2. 先跑 `achievement_audit`，看成果提取、证据抽取、AI 风险提醒是否合理。
-3. 再跑 `resume_rank`，看哪些成果最适合当前目标岗位。
-4. 最后跑 `interview_pack`，把结果转成 STAR、项目介绍和面试问答。
 
 ## CLI 用法
 
