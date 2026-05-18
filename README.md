@@ -48,7 +48,7 @@ python -m pip install -e ".[dev]"
 ### 1. 成果审计
 
 ```bash
-python -m shushu_internship_tool.achievement_audit --sources tests/fixtures/intern_materials/sources.json --out reports/audit --name internship-materials
+python -m shushu_internship_tool.achievement_audit --sources your_materials/sources.json --out reports/audit --name internship-materials
 ```
 
 输出：
@@ -68,7 +68,7 @@ python -m shushu_internship_tool.achievement_audit --sources tests/fixtures/inte
 ### 2. 简历成果排序
 
 ```bash
-python -m shushu_internship_tool.resume_rank --jd tests/fixtures/intern_materials/target_jd.txt --achievements reports/audit/achievement_audit.json --target-role backend --out reports/rank
+python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt --achievements reports/audit/achievement_audit.json --target-role backend --out reports/rank
 ```
 
 输出：
@@ -87,7 +87,7 @@ python -m shushu_internship_tool.resume_rank --jd tests/fixtures/intern_material
 ### 3. 业务文档知识层
 
 ```bash
-python -m shushu_internship_tool.doc_knowledge --docs tests/fixtures/intern_materials/business_overview.md --mode basic_rag --query "How does the workflow recover failures?" --out reports/knowledge
+python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_overview.md --mode basic_rag --query "How does the workflow recover failures?" --out reports/knowledge
 ```
 
 支持模式：
@@ -112,6 +112,8 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 - `application_checklist.md`
 
 ## 输出文件
+
+命令里的 `your_materials/` 是示例占位路径，仓库不会提供你的私有输入材料；使用时请替换成你自己本地准备的 `sources.json`、JD 和业务文档路径。
 
 - `business_context_rewrite.md`：更适合自己梳理业务背景和项目价值
 - `resume_rank.md`：更适合看成果排序、风险点和补强建议

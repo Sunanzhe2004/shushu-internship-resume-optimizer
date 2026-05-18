@@ -48,7 +48,7 @@ python -m pip install -e ".[dev]"
 ### 1. Achievement Audit
 
 ```bash
-python -m shushu_internship_tool.achievement_audit --sources tests/fixtures/intern_materials/sources.json --out reports/audit --name internship-materials
+python -m shushu_internship_tool.achievement_audit --sources your_materials/sources.json --out reports/audit --name internship-materials
 ```
 
 Outputs:
@@ -68,7 +68,7 @@ This stage also handles:
 ### 2. Resume Ranking
 
 ```bash
-python -m shushu_internship_tool.resume_rank --jd tests/fixtures/intern_materials/target_jd.txt --achievements reports/audit/achievement_audit.json --target-role backend --out reports/rank
+python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt --achievements reports/audit/achievement_audit.json --target-role backend --out reports/rank
 ```
 
 Outputs:
@@ -87,7 +87,7 @@ This stage also suggests:
 ### 3. Business Doc Knowledge Layer
 
 ```bash
-python -m shushu_internship_tool.doc_knowledge --docs tests/fixtures/intern_materials/business_overview.md --mode basic_rag --query "How does the workflow recover failures?" --out reports/knowledge
+python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_overview.md --mode basic_rag --query "How does the workflow recover failures?" --out reports/knowledge
 ```
 
 Supported modes:
@@ -112,6 +112,8 @@ Outputs:
 - `application_checklist.md`
 
 ## Outputs
+
+The `your_materials/` paths in the commands above are placeholders. This repository does not ship private input materials, so you should replace them with your own local `sources.json`, JD, and business-doc paths.
 
 - `business_context_rewrite.md`: better for self-review and interview framing
 - `resume_rank.md`: better for ranking, risks, and next-step strengthening
