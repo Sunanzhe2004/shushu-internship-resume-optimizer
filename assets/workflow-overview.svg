@@ -75,34 +75,34 @@
   <rect x="880" y="145" width="270" height="470" class="card"/>
   <text x="925" y="185" class="section">Outputs</text>
 
-  <rect x="905" y="210" width="220" height="82" class="output"/>
-  <text x="930" y="245" class="label">overview.md / html</text>
-  <text x="930" y="269" class="small">audit summary, evidence map,</text>
-  <text x="930" y="287" class="small">and missing-info snapshot</text>
+  <rect x="905" y="205" width="220" height="86" class="output"/>
+  <text x="925" y="236" class="label">overview.md / html</text>
+  <text x="925" y="260" class="small">audit summary, evidence map,</text>
+  <text x="925" y="278" class="small">and missing-info snapshot</text>
 
-  <rect x="905" y="305" width="220" height="82" class="output"/>
-  <text x="930" y="340" class="label">resume_rank.md</text>
-  <text x="930" y="364" class="small">ranking, gaps, and resume</text>
-  <text x="930" y="382" class="small">bullet guidance</text>
+  <rect x="905" y="302" width="220" height="86" class="output"/>
+  <text x="925" y="333" class="label">resume_rank.md</text>
+  <text x="925" y="357" class="small">ranking, gaps, and resume</text>
+  <text x="925" y="375" class="small">bullet guidance</text>
 
-  <rect x="905" y="400" width="220" height="92" class="output"/>
-  <text x="930" y="430" class="label">resume_project_summary.md</text>
-  <text x="930" y="454" class="small">compressed resume-facing</text>
-  <text x="930" y="472" class="small">project description</text>
+  <rect x="905" y="399" width="220" height="92" class="output"/>
+  <text x="925" y="430" class="label">resume_project_summary.md</text>
+  <text x="925" y="454" class="small">compressed resume-facing</text>
+  <text x="925" y="472" class="small">project description</text>
 
-  <rect x="905" y="505" width="220" height="104" class="output"/>
-  <text x="930" y="535" class="label">project_intro.md</text>
-  <text x="930" y="557" class="label">interview_qa.md</text>
-  <text x="930" y="581" class="small">STAR notes, follow-up answers,</text>
-  <text x="930" y="599" class="small">and interview checks</text>
+  <rect x="905" y="502" width="220" height="104" class="output"/>
+  <text x="925" y="533" class="label">project_intro.md</text>
+  <text x="925" y="555" class="label">interview_qa.md</text>
+  <text x="925" y="579" class="small">STAR notes, follow-up answers,</text>
+  <text x="925" y="597" class="small">and interview checks</text>
 
   <path d="M825 270 C855 270, 870 252, 905 252" class="arrow"/>
   <path d="M825 395 C855 395, 870 346, 905 346" class="arrow"/>
   <path d="M825 520 C855 520, 870 556, 905 556" class="arrow"/>
 
   <rect x="320" y="646" width="560" height="72" class="accent"/>
-  <text x="350" y="678" class="label">Optional: doc_knowledge</text>
-  <text x="350" y="702" class="body">query business docs for workflow details,</text>
-  <text x="640" y="702" class="body">domain rules, and context</text>
+  <text x="350" y="675" class="label">Optional: doc_knowledge</text>
+  <text x="350" y="699" class="body">query business docs for workflow details, domain rules,</text>
+  <text x="350" y="717" class="body">and contextual references</text>
   <path d="M250 486 C315 486, 320 682, 320 682" class="soft"/>
 </svg>

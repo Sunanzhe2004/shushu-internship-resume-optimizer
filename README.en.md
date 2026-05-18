@@ -43,6 +43,8 @@ The intended workflow is to audit raw materials first, verify the output manuall
 
 The repository includes a small public example input set so you can validate the commands and output structure before plugging in your own local materials.
 
+This example is mainly a public demo input for understanding the structure and running the workflow end to end. For your own project write-up, quantified results, evidence quality, and claim boundaries are still critical.
+
 Example files:
 
 - `examples/minimal_input/sources.json`

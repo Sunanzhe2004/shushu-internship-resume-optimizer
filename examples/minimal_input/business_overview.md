@@ -1,25 +1,27 @@
 # Business Overview
 
-## Team context
+## Product context
 
-The team works on mobile GUI Agent data and evaluation workflows.
+This example is based on a generic GUI Agent evaluation scenario rather than a real company workflow.
 
-## Current workflow
+## Workflow context
 
-The evaluation pipeline focuses on two linked goals:
+The main value comes from making trajectory review more structured:
 
-1. decide whether a task was completed successfully
-2. assign failure labels to unsuccessful cases
+1. collect screenshots, action traces, and intermediate states
+2. judge whether the task was actually completed
+3. separate invalid samples from genuine task failures
+4. turn the result into material that is easier to review and explain
 
 ## Why this matters
 
-If the evaluation result is unstable, downstream model comparison and data iteration become noisy.
+Without structure, agent-evaluation data can become noisy and hard to compare.
 
-If the failure-label system is vague, it is hard to learn what to fix in prompts, action design, or data collection.
+Once invalid data, task-success judgment, and follow-up review are separated, the workflow becomes easier to reuse for analysis, reporting, and resume-style project storytelling.
 
 ## What usually needs follow-up evidence
 
-- how invalid data is defined
-- which failure labels are used most often
-- how prompt changes affect precision or recall
-- whether the workflow reduces manual review cost
+- how invalid samples are defined
+- how review rules are updated over time
+- whether the workflow reduces manual review effort
+- what outputs are generated for downstream analysis or reporting

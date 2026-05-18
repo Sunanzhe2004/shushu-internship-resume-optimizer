@@ -1,15 +1,15 @@
 {
-  "name": "demo-internship-materials",
+  "name": "gui-agent-demo-materials",
   "sources": [
     {
       "source_type": "project_summary",
       "path_or_text": "examples/minimal_input/project_summary.md",
-      "title": "Project summary"
+      "title": "GUI agent public summary"
     },
     {
       "source_type": "business_docs",
       "path_or_text": "examples/minimal_input/business_overview.md",
-      "title": "Business overview"
+      "title": "GUI agent public overview"
     }
   ]
 }

@@ -1,12 +1,12 @@
-LLM Application Intern
+AI Application / Agent Evaluation Intern
 
 Responsibilities:
-- support prompt iteration, evaluation workflow design, and data analysis for large-model applications
-- summarize experiments clearly and turn findings into reusable product or data processes
-- collaborate with engineering and data teams on automation quality
+- support agent evaluation workflows, data review logic, or application-side quality analysis
+- help organize model or agent outputs into reusable evaluation and reporting processes
+- summarize technical trade-offs and workflow design clearly
 
 Preferred signals:
 - Python scripting
-- prompt engineering
-- evaluation or labeling workflow experience
-- ability to explain business context and trade-offs clearly
+- evaluation or review-workflow experience
+- familiarity with multi-step agent or application outputs
+- ability to explain business context, failure modes, and rule design clearly
