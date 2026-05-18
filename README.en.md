@@ -12,11 +12,11 @@ Shushu audits achievements and evidence first, ranks them against a target JD, a
 
 ## Quick Links
 
-- [3-Minute Demo](#3-minute-demo)
-- [What The Output Looks Like](#what-the-output-looks-like)
+- [Run The Demo First](#3-minute-demo)
+- [See Sample Outputs](#what-the-output-looks-like)
 - [Use Your Own Materials](#use-your-own-materials)
 - [Naming Notes](#naming-notes)
-- [Security Reminder](#security-reminder)
+- [Read The Security Reminder](#security-reminder)
 
 ## What Problem It Solves
 

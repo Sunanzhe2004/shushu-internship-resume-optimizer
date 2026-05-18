@@ -12,11 +12,11 @@ Shushu 会先审计成果与证据，再按目标 JD 排序，最后生成简历
 
 ## 快速入口
 
-- [3 分钟试跑](#3-分钟试跑)
-- [输出长什么样](#输出长什么样)
+- [先跑一遍 Demo](#3-分钟试跑)
+- [先看输出示例](#输出长什么样)
 - [接入自己的材料](#接入自己的材料)
-- [项目命名说明](#项目命名说明)
-- [安全提醒](#安全提醒)
+- [命名说明](#命名说明)
+- [先看安全提醒](#安全提醒)
 
 ## 它解决什么问题
 
@@ -182,7 +182,7 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_overview.md --mode basic_rag --query "What are the main failure modes?" --out reports/knowledge
 ```
 
-## 项目命名说明
+## 命名说明
 
 - 仓库名：`shushu-internship-resume-optimizer`
 - Python package：`shushu-internship-tool`
@@ -262,14 +262,14 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 
 ## 当前状态
 
-已相对稳定：
+相对稳定：
 
 - 多源材料成果审计
 - JD-based 成果排序
 - 简历项目总结生成
 - 面试 Q&A / STAR 草稿生成
 
-仍在增强：
+持续增强：
 
 - `doc_knowledge` 知识层
 - 更多行业 / 岗位样本
