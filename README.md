@@ -244,14 +244,11 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 - 对 AI 总结味重或可能夸大的内容做显式提醒
 - 优先产出“可投、可讲、可追问展开”的材料
 
-## 参考与演化
+## 致谢与来源
 
-这个仓库不是从零起的一套新工具，而是在原有工作流基础上的定向重构，主要延续了以下两条旧能力链路：
+这个仓库基于原项目做了面向“实习简历整理 / 面试复盘”场景的二次开发与定向重构。
 
-- `repo_audit`
-- `candidate_score`
-
-当前主流程为：
+在当前版本里，主流程主要聚焦于：
 
 `achievement_audit -> resume_rank -> interview_pack`
 
@@ -259,7 +256,7 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 
 `doc_knowledge`
 
-原始项目仓库：
+感谢原项目开发者提供的基础工作流与思路，原始项目传送门：
 
 - `https://github.com/LiuMengxuan04/shushu-internship-tool`
 

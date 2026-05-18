@@ -241,12 +241,9 @@ In practice, it is usually better to feed the tool a longer raw project summary,
 - explicitly warn about AI-heavy or overclaimed phrasing
 - optimize for material that is usable in applications, interviews, and follow-up questions
 
-## Lineage
+## Credits And Upstream
 
-This repository is a focused reorganization of earlier capabilities already present in the original workflow, especially:
-
-- `repo_audit`
-- `candidate_score`
+This repository is a scenario-focused secondary development / restructuring built on top of the original project, with the current version centered on internship resume preparation and interview review.
 
 The current primary flow is:
 
@@ -256,7 +253,7 @@ Optional supporting capability:
 
 `doc_knowledge`
 
-Original project repository:
+Thanks to the original project author for the upstream workflow and foundation. Upstream repository:
 
 - `https://github.com/LiuMengxuan04/shushu-internship-tool`
 
