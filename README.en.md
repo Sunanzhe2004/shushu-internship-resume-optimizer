@@ -2,11 +2,37 @@
 
 Turn internship code repos, project notes, and business context into resume-ready bullets and interview-ready project narratives.
 
-[简体中文](./README.md) · [English](./README.en.md) · [Contributing](./CONTRIBUTING.md)
+[简体中文](./README.md) · [English](./README.en.md) · [Contributing](./CONTRIBUTING.md) · [Release Notes](./RELEASE_NOTES.md)
+
+## Quick Links
+
+- Want the big picture first: see the workflow diagram below
+- Want to try it immediately: go to `3-Minute Demo`
+- Want to plug in your own materials: go to `CLI Usage`
+- Want the latest project summary: see [Release Notes](./RELEASE_NOTES.md)
 
 ## At A Glance
 
 ![workflow overview](./assets/workflow-overview.svg)
+
+## Highlights
+
+- multi-source input: code repos, project notes, and business docs
+- explicit risk surfacing for AI-heavy, repetitive, or overclaimed phrasing
+- dual-purpose outputs for self-review, resume compression, and interview prep
+- public demo inputs included for fast onboarding
+
+## Who This Is For
+
+- interns or early-career candidates turning messy project materials into clearer application content
+- users who already have project summaries but want help trimming AI-heavy, vague, or overly long wording
+- candidates who want outputs that are not just resume-facing, but also interview-explainable
+
+## Who This Is Not For
+
+- users looking for a one-click resume generator with no manual verification
+- users with no source material who want the repo to invent project experience
+- users planning to upload materials that cross company confidentiality or security boundaries
 
 ## 3-Minute Demo
 
@@ -67,6 +93,8 @@ This repository is for interns and early-career candidates who want to turn ongo
 
 It is not a one-click resume generator. The main idea is to audit raw materials first, surface evidence and risks, rank what matters for a target JD, and then generate outputs that are easier to verify and rewrite manually.
 
+The intended workflow is to audit raw materials first, verify the output manually, and only then compress the result into a resume-facing version.
+
 ## Core Capabilities
 
 - audit multi-source internship materials: `code_repo`, `project_summary`, `business_docs`
@@ -123,6 +151,17 @@ If you also want a lightweight query layer for business documents, run:
 ```bash
 python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_overview.md --mode basic_rag --query "What are the main failure modes?" --out reports/knowledge
 ```
+
+## What You Get
+
+After running the main flow, the most useful outputs are usually:
+
+- `overview.md / overview.html`: achievement extraction, evidence, gaps, and risk flags
+- `resume_rank.md`: what is worth keeping for the current target role
+- `resume_project_summary.md`: a tighter base for manual resume compression
+- `project_intro.md / interview_qa.md`: material for project explanation and interview review
+
+A practical order is: inspect `overview` first, then `resume_rank`, and only then use the interview-pack outputs for speaking practice.
 
 ## Command Details
 

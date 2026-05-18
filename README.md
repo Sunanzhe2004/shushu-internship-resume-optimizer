@@ -2,11 +2,37 @@
 
 把实习过程中的代码仓库、项目总结、业务背景材料，整理成更适合写进简历、用于面试复盘的内容。
 
-[简体中文](./README.md) · [English](./README.en.md) · [贡献指南](./CONTRIBUTING.md)
+[简体中文](./README.md) · [English](./README.en.md) · [贡献指南](./CONTRIBUTING.md) · [更新说明](./RELEASE_NOTES.md)
+
+## 快速导航
+
+- 想先看整体流程：直接看下面的流程图
+- 想马上体验：看 `3 分钟试跑`
+- 想接自己的材料：看 `CLI 用法`
+- 想了解最近改了什么：看 [更新说明](./RELEASE_NOTES.md)
 
 ## 一眼看懂
 
 ![workflow overview](./assets/workflow-overview.svg)
+
+## 亮点
+
+- 多源输入：同时接代码仓库、项目总结、业务文档
+- 风险提醒：显式标记 AI 味重、机械重复、疑似夸大的表述
+- 双重输出：既给自己复盘，也给简历压缩版和面试表达
+- 公开试跑：仓库内自带一套可提交的最小示例输入
+
+## 适合谁
+
+- 正在做实习复盘，想把零散材料整理成更像求职成果的人
+- 已经有项目总结，但担心 AI 味太重、太长、太虚的人
+- 想把“能做过”进一步变成“能写进简历、能在面试里讲清楚”的人
+
+## 不适合谁
+
+- 想一键生成并直接投递、完全不做人工确认的人
+- 手头没有可脱敏原始材料，只想凭空生成项目经历的人
+- 明知材料涉及公司安全红线，仍计划直接上传或公开的人
 
 ## 3 分钟试跑
 
@@ -67,6 +93,8 @@ python -m shushu_internship_tool.interview_pack \
 
 它不是“直接帮你生成一份简历”的黑盒，而是先拆解原始材料，补证据、做风险提醒、排序成果，再产出更适合你自己二次确认和改写的内容。
 
+更适合的使用方式是：先把原始材料拆开审计，再把结果人工确认后压缩进简历，而不是直接把一段 AI 总结贴上去。
+
 ## 核心能力
 
 - 审计多源实习材料：支持 `code_repo`、`project_summary`、`business_docs`
@@ -123,6 +151,17 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 ```bash
 python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_overview.md --mode basic_rag --query "What are the main failure modes?" --out reports/knowledge
 ```
+
+## 你会得到什么
+
+跑完整条链路后，最有代表性的输出通常是：
+
+- `overview.md / overview.html`：看成果拆解、证据、缺口和风险提醒
+- `resume_rank.md`：看哪些内容更值得写进当前岗位的简历
+- `resume_project_summary.md`：拿来继续人工压缩成正式简历版本
+- `project_intro.md / interview_qa.md`：拿来做项目介绍和面试前复盘
+
+更推荐的节奏是：先看 `overview`，再看 `resume_rank`，最后再用 `interview_pack` 产物练表达。
 
 ## 命令说明
 
