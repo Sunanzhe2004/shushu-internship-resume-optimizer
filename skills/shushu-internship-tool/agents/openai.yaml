@@ -1,4 +1,4 @@
 interface:
-  display_name: "鼠鼠实习妙妙工具"
-  short_description: "鼠鼠实习就业交流群联动版项目求职工具"
-  default_prompt: "使用鼠鼠实习妙妙工具，根据我的目标 JD 快速规划一个能投递、能面试、能讲清的计算机实习项目。"
+  display_name: "鼠鼠实习简历优化器"
+  short_description: "根据 JD 整理实习材料，生成更适合简历和面试的项目表达"
+  default_prompt: "使用鼠鼠实习简历优化器，根据我的目标 JD 和现有实习材料，帮我整理出能投递、能面试、能讲清的项目成果表述，并指出还缺哪些证据、指标或需要本人确认的内容。"
