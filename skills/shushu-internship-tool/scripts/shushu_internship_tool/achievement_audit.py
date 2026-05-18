@@ -423,6 +423,12 @@ def split_project_summary(text: str, title: str) -> list[dict[str, Any]]:
             sections_by_title[mapped_title].append(block_text)
         current_lines = []
 
+    def start_section(section_title: str) -> None:
+        nonlocal current_subheading, current_lines
+        flush_current()
+        current_subheading = section_title
+        current_lines = [section_title]
+
     for raw_line in lines:
         stripped = raw_line.strip()
         if not stripped:
@@ -437,9 +443,10 @@ def split_project_summary(text: str, title: str) -> list[dict[str, Any]]:
                 current_subheading = ""
                 continue
             if heading in ACHIEVEMENT_SECTION_TITLE_MAP:
-                flush_current()
-                current_subheading = heading
-                current_lines = [heading]
+                start_section(heading)
+                continue
+            if current_heading == "核心方案" and heading not in NON_ACHIEVEMENT_SECTIONS:
+                start_section(heading)
                 continue
 
         if current_heading == "业务背景":
@@ -451,9 +458,7 @@ def split_project_summary(text: str, title: str) -> list[dict[str, Any]]:
             if numbered_match:
                 subheading = numbered_match.group(1).strip()
                 if subheading in ACHIEVEMENT_SECTION_TITLE_MAP:
-                    flush_current()
-                    current_subheading = subheading
-                    current_lines = [subheading]
+                    start_section(subheading)
                     continue
             if stripped.startswith("**"):
                 continue
@@ -465,6 +470,20 @@ def split_project_summary(text: str, title: str) -> list[dict[str, Any]]:
 
     business_context = "\n".join(business_context_lines)
     merged_sections = [{"title": key, "text": "\n".join(value)} for key, value in sections_by_title.items() if value]
+
+    if not merged_sections:
+        fallback_lines = [line.strip() for line in lines if line.strip() and clean_summary_line(line)]
+        if len(fallback_lines) >= 2:
+            for index, line in enumerate(fallback_lines, start=1):
+                inferred_title = infer_title_from_block(line, title)
+                merged_sections.append(
+                    {
+                        "title": inferred_title if inferred_title else (title or f"section-{index}"),
+                        "text": line,
+                        "business_context": business_context,
+                    }
+                )
+            return merged_sections
 
     for section in merged_sections:
         section["business_context"] = business_context

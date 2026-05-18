@@ -4,6 +4,63 @@ Turn internship code repos, project notes, and business context into resume-read
 
 [简体中文](./README.md) · [English](./README.en.md) · [Contributing](./CONTRIBUTING.md)
 
+## At A Glance
+
+![workflow overview](./assets/workflow-overview.svg)
+
+## 3-Minute Demo
+
+The repository includes a small public example input set so you can validate the commands and output structure before plugging in your own local materials.
+
+Example files:
+
+- `examples/minimal_input/sources.json`
+- `examples/minimal_input/project_summary.md`
+- `examples/minimal_input/business_overview.md`
+- `examples/minimal_input/target_jd.txt`
+
+Quick run:
+
+```bash
+cd shushu-internship-resume-optimizer
+python -m venv .venv
+. .venv/bin/activate
+python -m pip install -e ".[dev]"
+```
+
+PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+
+python -m shushu_internship_tool.achievement_audit \
+  --sources examples/minimal_input/sources.json \
+  --out demo_reports/audit \
+  --name demo-materials
+
+python -m shushu_internship_tool.resume_rank \
+  --jd examples/minimal_input/target_jd.txt \
+  --achievements demo_reports/audit/achievement_audit.json \
+  --target-role llm-application-intern \
+  --out demo_reports/rank
+
+python -m shushu_internship_tool.interview_pack \
+  --project-notes demo_reports/rank/resume_rank.json \
+  --target-role llm-application-intern \
+  --out demo_reports/interview
+```
+
+If you use `cmd.exe`, activate with `.\.venv\Scripts\activate.bat` first.
+
+Suggested first files to inspect:
+
+- `demo_reports/audit/overview.md`
+- `demo_reports/rank/resume_rank.md`
+- `demo_reports/rank/resume_project_summary.md`
+- `demo_reports/interview/project_intro.md`
+- `demo_reports/interview/interview_qa.md`
+
 ## What This Project Is
 
 This repository is for interns and early-career candidates who want to turn ongoing work into clearer application materials.
@@ -34,7 +91,7 @@ Suggested order:
 3. Run `resume_rank` to see which achievements best match the target role.
 4. Run `interview_pack` to convert the results into interview material.
 
-## Quick Start
+## Installation
 
 ```bash
 cd shushu-internship-resume-optimizer
@@ -43,7 +100,31 @@ python -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-## Commands
+## CLI Usage
+
+If you already have your own local materials prepared, the most common end-to-end flow is:
+
+```bash
+python -m shushu_internship_tool.achievement_audit --sources your_materials/sources.json --out reports/audit --name internship-materials
+python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt --achievements reports/audit/achievement_audit.json --target-role llm-application-intern --out reports/rank
+python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role llm-application-intern --out reports/interview
+```
+
+Where:
+
+- `--sources` points to your `sources.json` input bundle
+- `--jd` points to the target job description text file
+- `--achievements` usually points to the previous `achievement_audit.json`
+- `--project-notes` usually points to `resume_rank.json`, but can also use the audit JSON directly
+- `--out` is the output directory for each stage
+
+If you also want a lightweight query layer for business documents, run:
+
+```bash
+python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_overview.md --mode basic_rag --query "What are the main failure modes?" --out reports/knowledge
+```
+
+## Command Details
 
 ### 1. Achievement Audit
 
@@ -68,7 +149,7 @@ This stage also handles:
 ### 2. Resume Ranking
 
 ```bash
-python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt --achievements reports/audit/achievement_audit.json --target-role backend --out reports/rank
+python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt --achievements reports/audit/achievement_audit.json --target-role llm-application-intern --out reports/rank
 ```
 
 Outputs:
@@ -99,7 +180,7 @@ Supported modes:
 ### 4. Interview Pack
 
 ```bash
-python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role backend --out reports/interview
+python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role llm-application-intern --out reports/interview
 ```
 
 Outputs:
@@ -114,6 +195,8 @@ Outputs:
 ## Outputs
 
 The `your_materials/` paths in the commands above are placeholders. This repository does not ship private input materials, so you should replace them with your own local `sources.json`, JD, and business-doc paths.
+
+For a minimal public template, see [examples/minimal_input](./examples/minimal_input/).
 
 - `business_context_rewrite.md`: better for self-review and interview framing
 - `resume_rank.md`: better for ranking, risks, and next-step strengthening
@@ -157,6 +240,12 @@ This project is still under active development.
 So far, parts of the workflow have been validated with real internship materials, especially the achievement audit, resume ranking, project intro, and interview Q&A flows. Some features, such as the knowledge-layer / knowledge-base related functions, still need broader testing.
 
 Many rules and generation strategies in this repository would benefit from more real materials and broader edge-case coverage. Feel free to try it with your own sanitized materials and share suggestions.
+
+## Local Checks
+
+This public repository no longer ships the private test samples by default. If you keep your own local tests, you can still run `pytest`.
+
+For a public smoke test, run the `examples/minimal_input` demo flow above.
 
 ## Contributing
 

@@ -51,6 +51,31 @@ def tokenize(text: str) -> set[str]:
     return tokens
 
 
+def extract_jd_keywords(jd_text: str) -> list[str]:
+    tokens = list(dict.fromkeys(TOKEN_RE.findall(jd_text)))
+    preferred = [
+        "fastapi",
+        "asyncio",
+        "python",
+        "后端",
+        "backend",
+        "llm",
+        "prompt",
+        "评估",
+        "归因",
+        "自动化",
+    ]
+    ordered: list[str] = []
+    lowered = jd_text.lower()
+    for keyword in preferred:
+        if keyword.lower() in lowered:
+            ordered.append(keyword)
+    for token in tokens:
+        if token not in ordered:
+            ordered.append(token)
+    return ordered
+
+
 def parse_achievements(payload: Any) -> list[dict[str, Any]]:
     if isinstance(payload, list):
         return [dict(item) for item in payload]
@@ -372,7 +397,7 @@ def derive_next_steps(item: dict[str, Any]) -> list[str]:
 
 
 def score_achievement(item: dict[str, Any], jd_text: str, target_role: str) -> dict[str, Any]:
-    jd_tokens = tokenize(jd_text)
+    jd_tokens = set(extract_jd_keywords(jd_text))
     item_tokens = tokenize(
         " ".join(
             [
@@ -443,7 +468,7 @@ def rank_achievements(jd_text: str, achievements: list[dict[str, Any]], target_r
     scored = [score_achievement(item, jd_text, target_role=target_role) for item in achievements]
     return sorted(
         scored,
-        key=lambda item: (track_rank(item), -item["score"], len(item["risk_notes"]), item["title"]),
+        key=lambda item: (-item["score"], track_rank(item), len(item["risk_notes"]), item["title"]),
     )
 
 

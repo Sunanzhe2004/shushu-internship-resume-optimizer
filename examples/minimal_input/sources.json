@@ -1,0 +1,15 @@
+{
+  "name": "demo-internship-materials",
+  "sources": [
+    {
+      "source_type": "project_summary",
+      "path_or_text": "examples/minimal_input/project_summary.md",
+      "title": "Project summary"
+    },
+    {
+      "source_type": "business_docs",
+      "path_or_text": "examples/minimal_input/business_overview.md",
+      "title": "Business overview"
+    }
+  ]
+}

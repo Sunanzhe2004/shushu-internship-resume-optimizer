@@ -4,6 +4,63 @@
 
 [简体中文](./README.md) · [English](./README.en.md) · [贡献指南](./CONTRIBUTING.md)
 
+## 一眼看懂
+
+![workflow overview](./assets/workflow-overview.svg)
+
+## 3 分钟试跑
+
+仓库内提供了一套可公开提交的最小示例输入，适合先验证命令和输出结构，再替换成你自己的本地材料。
+
+示例目录：
+
+- `examples/minimal_input/sources.json`
+- `examples/minimal_input/project_summary.md`
+- `examples/minimal_input/business_overview.md`
+- `examples/minimal_input/target_jd.txt`
+
+快速试跑：
+
+```bash
+cd shushu-internship-resume-optimizer
+python -m venv .venv
+. .venv/bin/activate
+python -m pip install -e ".[dev]"
+```
+
+PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+
+python -m shushu_internship_tool.achievement_audit \
+  --sources examples/minimal_input/sources.json \
+  --out demo_reports/audit \
+  --name demo-materials
+
+python -m shushu_internship_tool.resume_rank \
+  --jd examples/minimal_input/target_jd.txt \
+  --achievements demo_reports/audit/achievement_audit.json \
+  --target-role llm-application-intern \
+  --out demo_reports/rank
+
+python -m shushu_internship_tool.interview_pack \
+  --project-notes demo_reports/rank/resume_rank.json \
+  --target-role llm-application-intern \
+  --out demo_reports/interview
+```
+
+如果你在 `cmd.exe` 里运行，也可以先执行 `.\.venv\Scripts\activate.bat` 再运行后面的命令。
+
+试跑后建议先看这些文件：
+
+- `demo_reports/audit/overview.md`
+- `demo_reports/rank/resume_rank.md`
+- `demo_reports/rank/resume_project_summary.md`
+- `demo_reports/interview/project_intro.md`
+- `demo_reports/interview/interview_qa.md`
+
 ## 项目定位
 
 这个仓库面向正在实习、准备秋招 / 春招，或者想把手头项目沉淀成更清晰求职材料的同学。
@@ -34,7 +91,7 @@
 3. 再跑 `resume_rank`，看哪些成果最适合当前目标岗位。
 4. 最后跑 `interview_pack`，把结果转成 STAR、项目介绍和面试问答。
 
-## 快速开始
+## 安装
 
 ```bash
 cd shushu-internship-resume-optimizer
@@ -43,7 +100,31 @@ python -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-## 命令
+## CLI 用法
+
+如果你已经准备好了自己的输入，最常见的完整链路就是下面三步：
+
+```bash
+python -m shushu_internship_tool.achievement_audit --sources your_materials/sources.json --out reports/audit --name internship-materials
+python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt --achievements reports/audit/achievement_audit.json --target-role llm-application-intern --out reports/rank
+python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role llm-application-intern --out reports/interview
+```
+
+其中：
+
+- `--sources` 指向你的输入索引文件 `sources.json`
+- `--jd` 指向目标岗位 JD 文本
+- `--achievements` 一般接上一步生成的 `achievement_audit.json`
+- `--project-notes` 一般接 `resume_rank.json`，也可以直接接审计结果 JSON
+- `--out` 是每一步的输出目录
+
+如果你还想让工具辅助理解业务背景文档，可以单独运行：
+
+```bash
+python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_overview.md --mode basic_rag --query "What are the main failure modes?" --out reports/knowledge
+```
+
+## 命令说明
 
 ### 1. 成果审计
 
@@ -68,7 +149,7 @@ python -m shushu_internship_tool.achievement_audit --sources your_materials/sour
 ### 2. 简历成果排序
 
 ```bash
-python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt --achievements reports/audit/achievement_audit.json --target-role backend --out reports/rank
+python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt --achievements reports/audit/achievement_audit.json --target-role llm-application-intern --out reports/rank
 ```
 
 输出：
@@ -99,7 +180,7 @@ python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_ov
 ### 4. 面试包
 
 ```bash
-python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role backend --out reports/interview
+python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role llm-application-intern --out reports/interview
 ```
 
 输出：
@@ -114,6 +195,8 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 ## 输出文件
 
 命令里的 `your_materials/` 是示例占位路径，仓库不会提供你的私有输入材料；使用时请替换成你自己本地准备的 `sources.json`、JD 和业务文档路径。
+
+推荐的最小输入结构可以参考 [examples/minimal_input](./examples/minimal_input/)。
 
 - `business_context_rewrite.md`：更适合自己梳理业务背景和项目价值
 - `resume_rank.md`：更适合看成果排序、风险点和补强建议
@@ -187,8 +270,8 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 - `shushu-repo-audit` -> `achievement_audit`
 - `shushu-candidate-score` -> `resume_rank`
 
-## 开发
+## 本地检查
 
-```bash
-pytest
-```
+这个公开仓库不再默认提供私有测试样例；如果你本地还保留自己的测试集，可以继续运行 `pytest`。
+
+作为公开仓库的最小自检，建议直接跑上面的 `examples/minimal_input` demo 流程。

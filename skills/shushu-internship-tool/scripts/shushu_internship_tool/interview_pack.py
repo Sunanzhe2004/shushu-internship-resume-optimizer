@@ -160,7 +160,7 @@ def intro_line_for_item(item: dict[str, Any], index: int) -> str:
         return f"第一块是自动评估任务完成情况优化，我主要在做任务是否完成的自动判定，核心是把无效数据过滤、LLM 评估和后置校验拆开做，先尽量把环境异常和真实失败区分开。现在比较能落地地讲的是 {metric}。"
     if track == "label":
         return "第二块是失败 case 的错误标签自动化归因，我在搭一级、二级标签体系和归因 workflow，目标是把失败原因结构化，方便后面做分析和策略迭代。"
-    return f"{intro_opening(index)}{item['title']}，这一块我主要在做 {short_scope(item)}。"
+    return f"{intro_opening(index)}{item['title']}，我主要负责其中几块，这一块主要在做 {short_scope(item)}。"
 
 
 def qa_answer_for_scope(item: dict[str, Any]) -> str:
@@ -226,7 +226,7 @@ def render_project_intro(achievements: list[dict[str, Any]]) -> str:
     if not achievements:
         return "\n".join(parts + ["- 暂无可用项目内容。"])
 
-    parts.append("- 这个项目本质上是在给手机 GUI Agent 做自动评估，用自动化方式替代人工逐条标注，核心是判断任务有没有完成，同时把无效数据过滤出去。")
+    parts.append("- 这个项目整体是在做手机 GUI Agent 的自动评估，用自动化方式替代人工逐条标注，核心是判断任务有没有完成，同时把无效数据过滤出去。")
 
     spoken_lines: list[str] = []
     for index, item in enumerate(achievements[:3]):

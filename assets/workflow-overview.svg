@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Shushu Internship Resume Optimizer workflow overview</title>
+  <desc id="desc">A diagram showing inputs, core pipeline stages, optional knowledge flow, and generated outputs.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#eef6ff"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f7fbff"/>
+    </linearGradient>
+    <style>
+      .title { font: 700 30px 'Segoe UI', Arial, sans-serif; fill: #10233f; }
+      .subtitle { font: 400 16px 'Segoe UI', Arial, sans-serif; fill: #3d556f; }
+      .section { font: 700 18px 'Segoe UI', Arial, sans-serif; fill: #15304d; }
+      .label { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #17324d; }
+      .body { font: 400 14px 'Segoe UI', Arial, sans-serif; fill: #38516d; }
+      .small { font: 400 13px 'Segoe UI', Arial, sans-serif; fill: #4d6683; }
+      .card { fill: url(#panel); stroke: #c8d8ea; stroke-width: 2; rx: 18; ry: 18; }
+      .stage { fill: #ffffff; stroke: #7fb3ff; stroke-width: 2.5; rx: 20; ry: 20; }
+      .accent { fill: #e8f2ff; stroke: #7fb3ff; stroke-width: 2; rx: 16; ry: 16; }
+      .output { fill: #f8fffb; stroke: #91c8a1; stroke-width: 2; rx: 16; ry: 16; }
+      .arrow { stroke: #4b79b6; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .soft { stroke: #6c8db8; stroke-width: 2.5; stroke-dasharray: 7 6; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4b79b6"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="760" fill="url(#bg)"/>
+  <text x="60" y="70" class="title">Shushu Internship Resume Optimizer</text>
+  <text x="60" y="100" class="subtitle">From raw internship materials to resume-facing bullets and interview-facing explanations</text>
+
+  <rect x="50" y="145" width="240" height="470" class="card"/>
+  <text x="80" y="185" class="section">Inputs</text>
+  <rect x="75" y="210" width="190" height="92" class="accent"/>
+  <text x="95" y="240" class="label">sources.json</text>
+  <text x="95" y="265" class="body">links your local</text>
+  <text x="95" y="285" class="body">project notes and docs</text>
+
+  <rect x="75" y="325" width="190" height="92" class="accent"/>
+  <text x="95" y="355" class="label">target_jd.txt</text>
+  <text x="95" y="380" class="body">target role and</text>
+  <text x="95" y="400" class="body">selection criteria</text>
+
+  <rect x="75" y="440" width="190" height="92" class="accent"/>
+  <text x="95" y="470" class="label">business docs</text>
+  <text x="95" y="495" class="body">optional workflow,</text>
+  <text x="95" y="515" class="body">domain, and context notes</text>
+
+  <rect x="335" y="145" width="520" height="470" class="card"/>
+  <text x="365" y="185" class="section">Core pipeline</text>
+
+  <rect x="370" y="225" width="450" height="95" class="stage"/>
+  <text x="395" y="258" class="label">1. achievement_audit</text>
+  <text x="395" y="284" class="body">extract achievements, evidence, metrics, missing info, and user-check flags</text>
+
+  <rect x="370" y="350" width="450" height="95" class="stage"/>
+  <text x="395" y="383" class="label">2. resume_rank</text>
+  <text x="395" y="409" class="body">rank achievements against the JD and rewrite into tighter resume-facing bullets</text>
+
+  <rect x="370" y="475" width="450" height="95" class="stage"/>
+  <text x="395" y="508" class="label">3. interview_pack</text>
+  <text x="395" y="534" class="body">turn ranked notes into STAR drafts, project intros, follow-up Q&amp;A, and risk answers</text>
+
+  <path d="M290 260 C320 260, 330 260, 370 260" class="arrow"/>
+  <path d="M595 320 L595 350" class="arrow"/>
+  <path d="M595 445 L595 475" class="arrow"/>
+
+  <rect x="895" y="145" width="255" height="470" class="card"/>
+  <text x="925" y="185" class="section">Outputs</text>
+
+  <rect x="920" y="220" width="205" height="72" class="output"/>
+  <text x="940" y="248" class="label">overview.md / html</text>
+  <text x="940" y="272" class="small">audit summary and evidence map</text>
+
+  <rect x="920" y="310" width="205" height="72" class="output"/>
+  <text x="940" y="338" class="label">resume_rank.md</text>
+  <text x="940" y="362" class="small">ranking, gaps, and bullet guidance</text>
+
+  <rect x="920" y="400" width="205" height="72" class="output"/>
+  <text x="940" y="428" class="label">resume_project_summary.md</text>
+  <text x="940" y="452" class="small">concise resume-facing version</text>
+
+  <rect x="920" y="490" width="205" height="98" class="output"/>
+  <text x="940" y="518" class="label">project_intro.md</text>
+  <text x="940" y="540" class="label">interview_qa.md</text>
+  <text x="940" y="562" class="small">STAR, follow-up answers, and checks</text>
+
+  <path d="M820 260 C860 260, 870 255, 920 255" class="arrow"/>
+  <path d="M820 398 C860 398, 870 346, 920 346" class="arrow"/>
+  <path d="M820 523 C860 523, 870 539, 920 539" class="arrow"/>
+
+  <rect x="390" y="655" width="420" height="58" class="accent"/>
+  <text x="415" y="690" class="label">Optional: doc_knowledge</text>
+  <text x="640" y="690" class="body">query business docs for workflow details and domain context</text>
+  <path d="M240 486 C315 486, 330 684, 390 684" class="soft"/>
+</svg>
