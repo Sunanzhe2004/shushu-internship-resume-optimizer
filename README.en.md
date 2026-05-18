@@ -22,18 +22,6 @@ Turn internship code repos, project notes, and business context into resume-read
 - dual-purpose outputs for self-review, resume compression, and interview prep
 - public demo inputs included for fast onboarding
 
-## Who This Is For
-
-- interns or early-career candidates turning messy project materials into clearer application content
-- users who already have project summaries but want help trimming AI-heavy, vague, or overly long wording
-- candidates who want outputs that are not just resume-facing, but also interview-explainable
-
-## Who This Is Not For
-
-- users looking for a one-click resume generator with no manual verification
-- users with no source material who want the repo to invent project experience
-- users planning to upload materials that cross company confidentiality or security boundaries
-
 ## 3-Minute Demo
 
 The repository includes a small public example input set so you can validate the commands and output structure before plugging in your own local materials.

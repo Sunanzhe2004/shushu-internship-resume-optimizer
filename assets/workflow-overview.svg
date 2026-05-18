@@ -33,68 +33,75 @@
   <text x="60" y="70" class="title">Shushu Internship Resume Optimizer</text>
   <text x="60" y="100" class="subtitle">From raw internship materials to resume-facing bullets and interview-facing explanations</text>
 
-  <rect x="50" y="145" width="240" height="470" class="card"/>
+  <rect x="50" y="145" width="250" height="470" class="card"/>
   <text x="80" y="185" class="section">Inputs</text>
-  <rect x="75" y="210" width="190" height="92" class="accent"/>
+  <rect x="75" y="210" width="200" height="92" class="accent"/>
   <text x="95" y="240" class="label">sources.json</text>
-  <text x="95" y="265" class="body">links your local</text>
-  <text x="95" y="285" class="body">project notes and docs</text>
+  <text x="95" y="265" class="body">links local project notes,</text>
+  <text x="95" y="285" class="body">repos, and business docs</text>
 
-  <rect x="75" y="325" width="190" height="92" class="accent"/>
+  <rect x="75" y="325" width="200" height="92" class="accent"/>
   <text x="95" y="355" class="label">target_jd.txt</text>
-  <text x="95" y="380" class="body">target role and</text>
-  <text x="95" y="400" class="body">selection criteria</text>
+  <text x="95" y="380" class="body">target role, hiring focus,</text>
+  <text x="95" y="400" class="body">and selection criteria</text>
 
-  <rect x="75" y="440" width="190" height="92" class="accent"/>
+  <rect x="75" y="440" width="200" height="92" class="accent"/>
   <text x="95" y="470" class="label">business docs</text>
-  <text x="95" y="495" class="body">optional workflow,</text>
-  <text x="95" y="515" class="body">domain, and context notes</text>
+  <text x="95" y="495" class="body">optional workflow, domain,</text>
+  <text x="95" y="515" class="body">and context references</text>
 
-  <rect x="335" y="145" width="520" height="470" class="card"/>
+  <rect x="330" y="145" width="530" height="470" class="card"/>
   <text x="365" y="185" class="section">Core pipeline</text>
 
-  <rect x="370" y="225" width="450" height="95" class="stage"/>
-  <text x="395" y="258" class="label">1. achievement_audit</text>
-  <text x="395" y="284" class="body">extract achievements, evidence, metrics, missing info, and user-check flags</text>
+  <rect x="365" y="220" width="460" height="100" class="stage"/>
+  <text x="390" y="254" class="label">1. achievement_audit</text>
+  <text x="390" y="280" class="body">extract achievements, evidence, metrics,</text>
+  <text x="390" y="300" class="body">missing information, and user-check flags</text>
 
-  <rect x="370" y="350" width="450" height="95" class="stage"/>
-  <text x="395" y="383" class="label">2. resume_rank</text>
-  <text x="395" y="409" class="body">rank achievements against the JD and rewrite into tighter resume-facing bullets</text>
+  <rect x="365" y="345" width="460" height="100" class="stage"/>
+  <text x="390" y="379" class="label">2. resume_rank</text>
+  <text x="390" y="405" class="body">rank achievements against the JD and rewrite</text>
+  <text x="390" y="425" class="body">them into tighter resume-facing bullets</text>
 
-  <rect x="370" y="475" width="450" height="95" class="stage"/>
-  <text x="395" y="508" class="label">3. interview_pack</text>
-  <text x="395" y="534" class="body">turn ranked notes into STAR drafts, project intros, follow-up Q&amp;A, and risk answers</text>
+  <rect x="365" y="470" width="460" height="100" class="stage"/>
+  <text x="390" y="504" class="label">3. interview_pack</text>
+  <text x="390" y="530" class="body">turn ranked notes into STAR drafts, project intros,</text>
+  <text x="390" y="550" class="body">follow-up Q&amp;A, and risk answers</text>
 
   <path d="M290 260 C320 260, 330 260, 370 260" class="arrow"/>
-  <path d="M595 320 L595 350" class="arrow"/>
-  <path d="M595 445 L595 475" class="arrow"/>
+  <path d="M595 320 L595 345" class="arrow"/>
+  <path d="M595 445 L595 470" class="arrow"/>
 
-  <rect x="895" y="145" width="255" height="470" class="card"/>
+  <rect x="885" y="145" width="265" height="470" class="card"/>
   <text x="925" y="185" class="section">Outputs</text>
 
-  <rect x="920" y="220" width="205" height="72" class="output"/>
-  <text x="940" y="248" class="label">overview.md / html</text>
-  <text x="940" y="272" class="small">audit summary and evidence map</text>
+  <rect x="910" y="215" width="215" height="78" class="output"/>
+  <text x="930" y="245" class="label">overview.md / html</text>
+  <text x="930" y="269" class="small">audit summary, evidence map,</text>
+  <text x="930" y="287" class="small">and missing-info snapshot</text>
 
-  <rect x="920" y="310" width="205" height="72" class="output"/>
-  <text x="940" y="338" class="label">resume_rank.md</text>
-  <text x="940" y="362" class="small">ranking, gaps, and bullet guidance</text>
+  <rect x="910" y="310" width="215" height="78" class="output"/>
+  <text x="930" y="340" class="label">resume_rank.md</text>
+  <text x="930" y="364" class="small">ranking, gaps, and resume</text>
+  <text x="930" y="382" class="small">bullet guidance</text>
 
-  <rect x="920" y="400" width="205" height="72" class="output"/>
-  <text x="940" y="428" class="label">resume_project_summary.md</text>
-  <text x="940" y="452" class="small">concise resume-facing version</text>
+  <rect x="910" y="405" width="215" height="78" class="output"/>
+  <text x="930" y="435" class="label">resume_project_summary.md</text>
+  <text x="930" y="459" class="small">compressed resume-facing</text>
+  <text x="930" y="477" class="small">project version</text>
 
-  <rect x="920" y="490" width="205" height="98" class="output"/>
-  <text x="940" y="518" class="label">project_intro.md</text>
-  <text x="940" y="540" class="label">interview_qa.md</text>
-  <text x="940" y="562" class="small">STAR, follow-up answers, and checks</text>
+  <rect x="910" y="500" width="215" height="98" class="output"/>
+  <text x="930" y="530" class="label">project_intro.md</text>
+  <text x="930" y="552" class="label">interview_qa.md</text>
+  <text x="930" y="576" class="small">STAR, follow-up answers,</text>
+  <text x="930" y="594" class="small">and interview checks</text>
 
-  <path d="M820 260 C860 260, 870 255, 920 255" class="arrow"/>
-  <path d="M820 398 C860 398, 870 346, 920 346" class="arrow"/>
-  <path d="M820 523 C860 523, 870 539, 920 539" class="arrow"/>
+  <path d="M825 270 C855 270, 870 255, 910 255" class="arrow"/>
+  <path d="M825 395 C855 395, 870 349, 910 349" class="arrow"/>
+  <path d="M825 520 C855 520, 870 548, 910 548" class="arrow"/>
 
-  <rect x="390" y="655" width="420" height="58" class="accent"/>
-  <text x="415" y="690" class="label">Optional: doc_knowledge</text>
-  <text x="640" y="690" class="body">query business docs for workflow details and domain context</text>
-  <path d="M240 486 C315 486, 330 684, 390 684" class="soft"/>
+  <rect x="355" y="650" width="500" height="64" class="accent"/>
+  <text x="385" y="686" class="label">Optional: doc_knowledge</text>
+  <text x="575" y="686" class="body">query business docs for workflow details, domain rules, and context</text>
+  <path d="M250 486 C315 486, 335 682, 355 682" class="soft"/>
 </svg>
