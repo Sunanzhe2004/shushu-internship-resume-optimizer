@@ -5,7 +5,7 @@
 ### 公开示例与仓库可用性
 
 - 新增 `examples/minimal_input/`，提供可公开提交的最小示例输入
-- 新增 `assets/workflow-overview.svg`，帮助快速理解输入、主流程和输出结果
+- 新增首页 overview 流程图资源，帮助快速理解输入、主流程和输出结果
 - README / README.en 首页补充了流程图、试跑说明、CLI 入口和本地检查说明
 
 ### 工作流修复

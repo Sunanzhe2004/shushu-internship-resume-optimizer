@@ -1,67 +1,47 @@
 # Shushu Internship Resume Optimizer
 
-Turn internship code repos, project notes, and business context into resume-ready bullets and interview-ready project narratives.
+**Turn scattered internship materials into resume-ready bullets and interview-ready project stories.**
+
+Shushu audits achievements and evidence first, ranks them against a target JD, and then generates resume bullets, project summaries, STAR drafts, interview Q&A, and risk checklists.
 
 [简体中文](./README.md) · [English](./README.en.md) · [Contributing](./CONTRIBUTING.md) · [Release Notes](./RELEASE_NOTES.md)
 
-## What This Project Is
+![workflow overview](./assets/workflow-overview.png)
 
-This repository is for interns and early-career candidates who want to turn ongoing work into clearer application materials.
-
-It is not a one-click resume generator. The main idea is to audit raw materials first, surface evidence and risks, rank what matters for a target JD, and then generate outputs that are easier to verify and rewrite manually.
-
-The intended workflow is to audit raw materials first, verify the output manually, and only then compress the result into a resume-facing version.
-
-## Core Capabilities
-
-- audit multi-source internship materials: `code_repo`, `project_summary`, `business_docs`
-- merge raw materials into achievement candidates with evidence, business context, metrics, and missing information
-- rank achievements against a target JD and generate resume-facing bullet suggestions
-- flag AI-heavy, repetitive, potentially overclaimed, or user-check-required phrasing
-- separate long-form self-review notes from concise resume-facing project summaries
-- generate STAR drafts, project intros, interview Q&A, risk answers, and an application checklist
+> ⚠️ Sanitize first: do not upload company-internal docs, real user data, keys, tokens, or any internship material that cannot be shared externally.
 
 ## Quick Links
 
-- Want to see whether it fits your use case: read `What This Project Is`
-- Want to understand what it does: read `Core Capabilities`
-- Want to try it immediately: go to `3-Minute Demo`
-- Want to plug in your own materials: go to `CLI Usage`
-- Want the latest project summary: see [Release Notes](./RELEASE_NOTES.md)
+- [3-Minute Demo](#3-minute-demo)
+- [What The Output Looks Like](#what-the-output-looks-like)
+- [Use Your Own Materials](#use-your-own-materials)
+- [Naming Notes](#naming-notes)
+- [Security Reminder](#security-reminder)
 
-## At A Glance
+## What Problem It Solves
 
-![workflow overview](./assets/workflow-overview.svg)
+Many internship materials are not weak. They are just scattered:
 
-## Highlights
+- the implementation exists in the repo, but the contribution boundary is unclear in the resume
+- project notes are long, but not ready to compress into resume bullets
+- the details are there, but the project story is hard to explain consistently in interviews
+- direct AI summarization often becomes vague, repetitive, overclaimed, or weakly supported
 
-- turn scattered internship materials into clearer resume and interview outputs
-- surface risks instead of only generating text, especially for AI-heavy, repetitive, or overclaimed phrasing
-- separate self-review outputs from concise resume-facing summaries
-- include a public minimal example input set for fast onboarding
+This project is not meant to blindly generate a resume for you. It first audits the raw material, extracts evidence, flags risks, and highlights gaps, then turns that into application-facing material that is easier to verify and rewrite manually.
 
-## Workflow
+## Why Use It
 
-Main flow:
-
-`JD + multi-source internship materials -> achievement_audit -> resume_rank -> interview_pack`
-
-Optional enhancement:
-
-`business_docs -> doc_knowledge`
-
-Suggested order:
-
-1. Prepare a `sources.json` file with repo paths, project notes, and business docs.
-2. Run `achievement_audit` to inspect extracted achievements, evidence, and risk flags.
-3. Run `resume_rank` to see which achievements best match the target role.
-4. Run `interview_pack` to convert the results into interview material.
+- not a blind resume generator: it extracts evidence, metrics, and contribution boundaries before rewriting
+- not a one-size-fits-all template: it ranks achievements against a target JD
+- not repo-only: it supports `code_repo`, `project_summary`, and `business_docs`
+- not hype-driven: it flags AI-heavy, risky, or user-check-required statements
+- not just for resumes: it also generates project intros, STAR drafts, interview Q&A, and application checklists
 
 ## 3-Minute Demo
 
-The repository includes a small public example input set so you can validate the commands and output structure before plugging in your own local materials.
+Environment requirement: `Python >= 3.10`
 
-This example is mainly a public demo input for understanding the input structure and running the workflow end to end. For your own project write-up, quantified results, evidence quality, and claim boundaries are still critical.
+The repository includes a minimal public example input set so you can validate the workflow and output shape before plugging in your own local materials.
 
 Example files:
 
@@ -70,21 +50,17 @@ Example files:
 - `examples/minimal_input/business_overview.md`
 - `examples/minimal_input/target_jd.txt`
 
-Installation:
-
 ```bash
+git clone https://github.com/Sunanzhe2004/shushu-internship-resume-optimizer.git
 cd shushu-internship-resume-optimizer
+
 python -m venv .venv
-. .venv/bin/activate
-python -m pip install -e ".[dev]"
 ```
 
-Demo commands:
+macOS / Linux:
 
-PowerShell:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
+```bash
+source .venv/bin/activate
 python -m pip install -e ".[dev]"
 
 python -m shushu_internship_tool.achievement_audit \
@@ -104,19 +80,89 @@ python -m shushu_internship_tool.interview_pack \
   --out demo_reports/interview
 ```
 
-If you use `cmd.exe`, activate with `.\.venv\Scripts\activate.bat` first.
+Windows PowerShell:
 
-Suggested first files to inspect:
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+
+python -m shushu_internship_tool.achievement_audit `
+  --sources examples/minimal_input/sources.json `
+  --out demo_reports/audit `
+  --name demo-materials
+
+python -m shushu_internship_tool.resume_rank `
+  --jd examples/minimal_input/target_jd.txt `
+  --achievements demo_reports/audit/achievement_audit.json `
+  --target-role llm-application-intern `
+  --out demo_reports/rank
+
+python -m shushu_internship_tool.interview_pack `
+  --project-notes demo_reports/rank/resume_rank.json `
+  --target-role llm-application-intern `
+  --out demo_reports/interview
+```
+
+Look at these first after the run:
 
 - `demo_reports/audit/overview.md`
-- `demo_reports/rank/resume_rank.md`
 - `demo_reports/rank/resume_project_summary.md`
-- `demo_reports/interview/project_intro.md`
 - `demo_reports/interview/interview_qa.md`
 
-## CLI Usage
+## What The Output Looks Like
 
-If you already have your own local materials prepared, the most common end-to-end flow is:
+These are illustrative snippets meant to help a GitHub visitor quickly judge whether the outputs feel useful, editable, and interview-ready.
+
+### `resume_project_summary.md` sample
+
+```md
+- Built an achievement-audit workflow for multi-source internship materials, combining repos,
+  project notes, and business context into reusable evidence-backed achievement candidates.
+- Ranked achievements against a target JD so the resume-facing version highlights business understanding,
+  implementation depth, and measurable impact before lower-signal details.
+- Added explicit risk reminders for AI-heavy wording, unsupported claims, and unclear ownership boundaries
+  to reduce “sounds polished but collapses under follow-up questions” cases.
+```
+
+### `interview_qa.md` sample
+
+```md
+Q: What was your most important contribution in this project?
+A: My core contribution was not generating a resume directly. It was building a workflow that
+   breaks raw materials into achievements, evidence, and risk layers first, so later summaries
+   stay verifiable and easier to defend in interviews.
+
+Q: Why add risk reminders at all?
+A: Because many AI-generated summaries sound smooth but become vague, overclaimed, or weakly supported.
+   I wanted the tool to surface what must be checked by the user before it reaches the resume.
+```
+
+### What `overview.md` usually contains
+
+- extracted achievements with evidence, metrics, business context, and missing information
+- `user_check_flags` to mark lines that need explicit user confirmation
+- a structure better suited for review first and resume compression second
+
+## Workflow
+
+Main flow:
+
+`JD + multi-source internship materials -> achievement_audit -> resume_rank -> interview_pack`
+
+Optional enhancement:
+
+`business_docs -> doc_knowledge`
+
+Recommended order:
+
+1. Prepare `sources.json` with repo paths, project notes, and business docs.
+2. Run `achievement_audit` to inspect extracted achievements, evidence, and risk flags.
+3. Run `resume_rank` to see which achievements best fit the target role.
+4. Run `interview_pack` to convert the result into STAR material, project intros, and interview Q&A.
+
+## Use Your Own Materials
+
+The most common end-to-end flow is:
 
 ```bash
 python -m shushu_internship_tool.achievement_audit --sources your_materials/sources.json --out reports/audit --name internship-materials
@@ -124,30 +170,28 @@ python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt -
 python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role llm-application-intern --out reports/interview
 ```
 
-Where:
+For the minimal input structure, see [examples/minimal_input](./examples/minimal_input/):
 
-- `--sources` points to your `sources.json` input bundle
-- `--jd` points to the target job description text file
-- `--achievements` usually points to the previous `achievement_audit.json`
-- `--project-notes` usually points to `resume_rank.json`, but can also use the audit JSON directly
-- `--out` is the output directory for each stage
+- `sources.json`: input index that ties repos, summaries, and business docs together
+- `project_summary.md`: a long raw summary is fine; the tool is meant to break it down first
+- `business_overview.md`: useful for business context, upstream/downstream flow, and problem framing
+- `target_jd.txt`: used for ranking and wording calibration
 
-If you also want a lightweight query layer for business documents, run:
+If you also want lightweight business-doc querying, run:
 
 ```bash
 python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_overview.md --mode basic_rag --query "What are the main failure modes?" --out reports/knowledge
 ```
 
-## What You Get
+## Naming Notes
 
-After running the main flow, the most useful outputs are usually:
+- repo name: `shushu-internship-resume-optimizer`
+- Python package: `shushu-internship-tool`
+- module path: `shushu_internship_tool`
+- console scripts: `shushu-achievement-audit`, `shushu-resume-rank`, `shushu-interview-pack`
+- recommended README run style: `python -m shushu_internship_tool.xxx`
 
-- `overview.md / overview.html`: achievement extraction, evidence, gaps, and risk flags
-- `resume_rank.md`: what is worth keeping for the current target role
-- `resume_project_summary.md`: a tighter base for manual resume compression
-- `project_intro.md / interview_qa.md`: material for project explanation and interview review
-
-A practical order is: inspect `overview` first, then `resume_rank`, and only then use the interview-pack outputs for speaking practice.
+This keeps the current package layout stable. If naming is unified later, it will be called out clearly in the release notes.
 
 ## Command Details
 
@@ -217,26 +261,21 @@ Outputs:
 - `risk_answers.md`
 - `application_checklist.md`
 
-## Outputs
-
-The `your_materials/` paths in the commands above are placeholders. This repository does not ship private input materials, so you should replace them with your own local `sources.json`, JD, and business-doc paths.
-
-For a minimal public template, see [examples/minimal_input](./examples/minimal_input/).
-
-- `business_context_rewrite.md`: better for self-review and interview framing
-- `resume_rank.md`: better for ranking, risks, and next-step strengthening
-- `resume_project_summary.md`: better for concise resume-facing project descriptions
-- `interview_qa.md`: better for fast interview review
-
-In practice, it is usually better to feed the tool a longer raw project summary, then manually verify and compress the result, instead of pasting the long summary directly into a resume.
-
 ## Current Status
 
-This project is still under active development.
+Relatively stable:
 
-So far, parts of the workflow have been validated with real internship materials, especially the achievement audit, resume ranking, project intro, and interview Q&A flows. Some features, such as the knowledge-layer / knowledge-base related functions, still need broader testing.
+- multi-source achievement audit
+- JD-based achievement ranking
+- resume project summary generation
+- interview Q&A and STAR draft generation
 
-Many rules and generation strategies in this repository would benefit from more real materials and broader edge-case coverage. Feel free to try it with your own sanitized materials and share suggestions.
+Still being strengthened:
+
+- the `doc_knowledge` layer
+- broader role and industry samples
+- finer-grained AI-heaviness and overclaim detection
+- fuller test coverage
 
 ## Design Principles
 
@@ -249,9 +288,9 @@ Many rules and generation strategies in this repository would benefit from more 
 
 ## Credits And Upstream
 
-This repository is a scenario-focused secondary development / restructuring built on top of the original project, with the current version centered on internship resume preparation and interview review.
+This repository is a scenario-focused secondary development and restructuring built on top of the original project, with the current version centered on internship resume preparation and interview review.
 
-The current primary flow is:
+Current primary flow:
 
 `achievement_audit -> resume_rank -> interview_pack`
 
@@ -259,13 +298,11 @@ Optional supporting capability:
 
 `doc_knowledge`
 
-Thanks to the original project author for the upstream workflow and foundation. Upstream repository:
+Thanks to the original project author for the upstream workflow and foundation:
 
 - `https://github.com/LiuMengxuan04/shushu-internship-tool`
 
 ## Contributing
-
-Contributions are welcome.
 
 If you want to improve extraction quality, resume rewriting, interview phrasing, testing coverage, or docs, please read [CONTRIBUTING.md](./CONTRIBUTING.md) first. Issues and PRs are both welcome.
 

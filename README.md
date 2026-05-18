@@ -1,90 +1,66 @@
 # Shushu 实习简历优化器
 
-把实习过程中的代码仓库、项目总结、业务背景材料，整理成更适合写进简历、用于面试复盘的内容。
+**把你的实习材料，从“散乱记录”变成“可投简历 + 可讲项目故事”。**
+
+Shushu 会先审计成果与证据，再按目标 JD 排序，最后生成简历 bullet、项目总结、STAR 草稿、面试 Q&A 和风险检查清单。
 
 [简体中文](./README.md) · [English](./README.en.md) · [贡献指南](./CONTRIBUTING.md) · [更新说明](./RELEASE_NOTES.md)
 
-## 项目定位
+![workflow overview](./assets/workflow-overview.png)
 
-这个仓库面向正在实习、准备秋招 / 春招，或者想把手头项目沉淀成更清晰求职材料的同学。
+> ⚠️ 使用前请先脱敏：不要提交公司内部文档、真实用户数据、密钥、访问凭证，或任何不能公开传播的实习材料。
 
-它不是“直接帮你生成一份简历”的黑盒，而是先拆解原始材料，补证据、做风险提醒、排序成果，再产出更适合你自己二次确认和改写的内容。
+## 快速入口
 
-更适合的使用方式是：先把原始材料拆开审计，再把结果人工确认后压缩进简历，而不是直接把一段 AI 总结贴上去。
+- [3 分钟试跑](#3-分钟试跑)
+- [输出长什么样](#输出长什么样)
+- [接入自己的材料](#接入自己的材料)
+- [项目命名说明](#项目命名说明)
+- [安全提醒](#安全提醒)
 
-## 核心能力
+## 它解决什么问题
 
-- 审计多源实习材料：支持 `code_repo`、`project_summary`、`business_docs`
-- 从原始材料中归并成果项，抽取证据、业务背景、技术栈、指标和缺失信息
-- 结合目标 JD 对成果排序，生成更适合写进简历的表述
-- 识别 AI 总结味重、机械重复、疑似夸大、需要本人确认的内容
-- 区分“自己复盘版”和“简历压缩版”项目总结，避免长文直接贴进简历
-- 生成 STAR 草稿、项目介绍、追问问答、风险回答、投递前检查清单
+很多实习材料的问题不是“没有内容”，而是内容太散：
 
-## 快速导航
+- 代码仓库里有实现，但简历里讲不清贡献边界
+- 项目总结写得很长，但不适合直接压成简历 bullet
+- 面试时能回忆细节，却很难稳定讲出一条完整项目故事
+- 直接用 AI 总结，容易出现空泛、机械、夸大或证据不足的表述
 
-- 想先判断适不适合你：看 `项目定位`
-- 想快速了解它能做什么：看 `核心能力`
-- 想马上体验：看 `3 分钟试跑`
-- 想接自己的材料：看 `CLI 用法`
-- 想了解最近改了什么：看 [更新说明](./RELEASE_NOTES.md)
+这个项目的目标不是替你“直接编一份简历”，而是先把原始材料拆开审计，再把可验证的成果、证据、风险和缺口整理出来，最后生成更适合你自己二次确认和改写的求职材料。
 
-## 一眼看懂
+## 为什么用它
 
-![workflow overview](./assets/workflow-overview.svg)
-
-## 亮点
-
-- 从零散材料到求职表达：把代码仓库、项目总结、业务文档整理成简历和面试材料
-- 不只生成，也会提醒风险：显式标记 AI 味重、机械重复、疑似夸大的表述
-- 区分两种使用场景：同时输出自己复盘版和简历压缩版
-- 上手成本低：仓库内自带一套可公开提交的最小示例输入
-
-## 工作流
-
-主流程：
-
-`JD + 多源实习材料 -> achievement_audit -> resume_rank -> interview_pack`
-
-可选增强：
-
-`business_docs -> doc_knowledge`
-
-建议按下面顺序使用：
-
-1. 准备 `sources.json`，把代码仓库、项目总结、业务背景文档整理进去。
-2. 先跑 `achievement_audit`，看成果提取、证据抽取、AI 风险提醒是否合理。
-3. 再跑 `resume_rank`，看哪些成果最适合当前目标岗位。
-4. 最后跑 `interview_pack`，把结果转成 STAR、项目介绍和面试问答。
+- 不是直接“编简历”：先提取证据、指标、职责边界，再生成表达
+- 不是统一模板：会结合目标 JD 对成果排序
+- 不是只看代码：同时支持 `code_repo`、`project_summary`、`business_docs`
+- 不鼓励吹牛：会标记 AI 味、夸大风险和待确认信息
+- 不止写简历：同时生成项目介绍、STAR 草稿、追问 Q&A 和投递前检查清单
 
 ## 3 分钟试跑
 
-仓库内提供了一套可公开提交的最小示例输入，适合先验证命令和输出结构，再替换成你自己的本地材料。
+环境要求：`Python >= 3.10`
 
-这套 example 更偏“公开演示输入”，主要用于帮助理解输入结构和跑通流程；如果你要写自己的项目，量化指标、证据强度和表述边界仍然是非常重要的一环。
+仓库内自带一套可公开提交的最小示例输入，适合先验证命令、输出结构和工作流，再替换成你自己的本地材料。
 
-示例目录：
+示例文件：
 
 - `examples/minimal_input/sources.json`
 - `examples/minimal_input/project_summary.md`
 - `examples/minimal_input/business_overview.md`
 - `examples/minimal_input/target_jd.txt`
 
-安装：
-
 ```bash
+git clone https://github.com/Sunanzhe2004/shushu-internship-resume-optimizer.git
 cd shushu-internship-resume-optimizer
+
 python -m venv .venv
-. .venv/bin/activate
-python -m pip install -e ".[dev]"
 ```
 
-试跑命令：
+macOS / Linux:
 
-PowerShell:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
+```bash
+source .venv/bin/activate
 python -m pip install -e ".[dev]"
 
 python -m shushu_internship_tool.achievement_audit \
@@ -104,19 +80,88 @@ python -m shushu_internship_tool.interview_pack \
   --out demo_reports/interview
 ```
 
-如果你在 `cmd.exe` 里运行，也可以先执行 `.\.venv\Scripts\activate.bat` 再运行后面的命令。
+Windows PowerShell:
 
-试跑后建议先看这些文件：
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+
+python -m shushu_internship_tool.achievement_audit `
+  --sources examples/minimal_input/sources.json `
+  --out demo_reports/audit `
+  --name demo-materials
+
+python -m shushu_internship_tool.resume_rank `
+  --jd examples/minimal_input/target_jd.txt `
+  --achievements demo_reports/audit/achievement_audit.json `
+  --target-role llm-application-intern `
+  --out demo_reports/rank
+
+python -m shushu_internship_tool.interview_pack `
+  --project-notes demo_reports/rank/resume_rank.json `
+  --target-role llm-application-intern `
+  --out demo_reports/interview
+```
+
+跑完后优先看：
 
 - `demo_reports/audit/overview.md`
-- `demo_reports/rank/resume_rank.md`
 - `demo_reports/rank/resume_project_summary.md`
-- `demo_reports/interview/project_intro.md`
 - `demo_reports/interview/interview_qa.md`
 
-## CLI 用法
+## 输出长什么样
 
-如果你已经准备好了自己的输入，最常见的完整链路就是下面三步：
+下面是 README 里直接给你看的示意片段，重点不是“自动生成一堆文件”，而是让你快速判断输出是否像你真的会拿来改、拿来讲。
+
+### `resume_project_summary.md` 示意片段
+
+```md
+- 围绕多源实习材料设计成果审计链路，统一整理代码仓库、项目总结与业务背景文档，
+  将零散记录压缩为可复用的成果项与证据清单。
+- 结合目标 JD 对成果进行排序，优先保留更能体现业务理解、实现深度和可量化影响的内容，
+  用于生成更适合简历投递的项目总结底稿。
+- 对 AI 味重、证据不足或职责边界不清的表述增加显式风险提醒，
+  降低“看起来像写得很好、但追问就露馅”的问题。
+```
+
+### `interview_qa.md` 示意片段
+
+```md
+Q: 这个项目里你最核心的贡献是什么？
+A: 我做的不是直接生成一份简历，而是把原始材料先拆成成果、证据和风险三层，
+   这样后面的简历表达和面试回答都能围绕可验证信息展开。
+
+Q: 为什么要加风险提醒？
+A: 因为很多 AI 生成表述在“读起来顺”之外，还会出现夸大、空泛和边界不清的问题。
+   我希望它先提醒哪些内容需要本人确认，再决定哪些能写进简历。
+```
+
+### `overview.md` 你通常会看到什么
+
+- 每个成果项对应的证据、指标、业务背景和待补信息
+- `user_check_flags` 标记，提醒哪些表述需要你亲自确认
+- 更适合先复盘、再人工压缩进简历的材料结构
+
+## 工作流
+
+主流程：
+
+`JD + 多源实习材料 -> achievement_audit -> resume_rank -> interview_pack`
+
+可选增强：
+
+`business_docs -> doc_knowledge`
+
+推荐顺序：
+
+1. 先准备 `sources.json`，把代码仓库、项目总结和业务背景文档整理进去。
+2. 先跑 `achievement_audit`，确认成果抽取、证据和风险提醒是否合理。
+3. 再跑 `resume_rank`，判断哪些成果最适合当前目标岗位。
+4. 最后跑 `interview_pack`，把结果转成 STAR、项目介绍和面试问答。
+
+## 接入自己的材料
+
+最常见的完整链路是：
 
 ```bash
 python -m shushu_internship_tool.achievement_audit --sources your_materials/sources.json --out reports/audit --name internship-materials
@@ -124,30 +169,28 @@ python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt -
 python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role llm-application-intern --out reports/interview
 ```
 
-其中：
+最小输入结构可以参考 [examples/minimal_input](./examples/minimal_input/)：
 
-- `--sources` 指向你的输入索引文件 `sources.json`
-- `--jd` 指向目标岗位 JD 文本
-- `--achievements` 一般接上一步生成的 `achievement_audit.json`
-- `--project-notes` 一般接 `resume_rank.json`，也可以直接接审计结果 JSON
-- `--out` 是每一步的输出目录
+- `sources.json`：输入索引，串起 repo、总结和业务文档
+- `project_summary.md`：长一点也没关系，适合先交给工具做拆解
+- `business_overview.md`：帮助补足业务背景、上下游关系和问题场景
+- `target_jd.txt`：目标岗位 JD，用来做成果排序和表达校准
 
-如果你还想让工具辅助理解业务背景文档，可以单独运行：
+如果你还想让工具辅助理解业务文档，可以额外运行：
 
 ```bash
 python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_overview.md --mode basic_rag --query "What are the main failure modes?" --out reports/knowledge
 ```
 
-## 你会得到什么
+## 项目命名说明
 
-跑完整条链路后，最有代表性的输出通常是：
+- 仓库名：`shushu-internship-resume-optimizer`
+- Python package：`shushu-internship-tool`
+- 模块路径：`shushu_internship_tool`
+- Console scripts：`shushu-achievement-audit`、`shushu-resume-rank`、`shushu-interview-pack`
+- README 里当前推荐运行方式：`python -m shushu_internship_tool.xxx`
 
-- `overview.md / overview.html`：看成果拆解、证据、缺口和风险提醒
-- `resume_rank.md`：看哪些内容更值得写进当前岗位的简历
-- `resume_project_summary.md`：拿来继续人工压缩成正式简历版本
-- `project_intro.md / interview_qa.md`：拿来做项目介绍和面试前复盘
-
-更推荐的使用节奏是：先看 `overview`，再看 `resume_rank`，最后再用 `interview_pack` 产物练表达。
+这样做是为了优先保持当前包结构稳定；如果后续统一命名，会在更新说明里明确写出。
 
 ## 命令说明
 
@@ -164,7 +207,7 @@ python -m shushu_internship_tool.achievement_audit --sources your_materials/sour
 - `overview.html`
 - `business_context_rewrite.md`
 
-这一层会额外处理：
+这一层额外会做：
 
 - 长项目总结拆分成多个成果项
 - 指标、证据、风险点、待补信息抽取
@@ -183,7 +226,7 @@ python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt -
 - `resume_rank.md`
 - `resume_project_summary.md`
 
-这一层会额外给出：
+这一层额外会给出：
 
 - 更像简历 bullet 的推荐写法
 - 哪些指标最值得补
@@ -217,44 +260,35 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 - `risk_answers.md`
 - `application_checklist.md`
 
-## 输出文件
-
-命令里的 `your_materials/` 是示例占位路径，仓库不会提供你的私有输入材料；使用时请替换成你自己本地准备的 `sources.json`、JD 和业务文档路径。
-
-推荐的最小输入结构可以参考 [examples/minimal_input](./examples/minimal_input/)。
-
-- `business_context_rewrite.md`：更适合自己梳理业务背景和项目价值
-- `resume_rank.md`：更适合看成果排序、风险点和补强建议
-- `resume_project_summary.md`：更适合压缩成正式简历中的项目描述
-- `interview_qa.md`：更适合面试前快速复盘
-
-更推荐的用法不是把长项目总结直接贴进简历，而是：
-
-1. 先喂给工具做拆解和审计
-2. 用 `resume_project_summary.md` 做压缩版底稿
-3. 再手动确认数字、边界、职责范围和措辞
-
 ## 当前状态
 
-项目仍在持续开发中。
+已相对稳定：
 
-目前主要基于真实实习材料对部分链路做过验证，例如成果审计、简历排序、项目介绍、面试问答；知识层和部分边界场景仍需要更多测试样本。
+- 多源材料成果审计
+- JD-based 成果排序
+- 简历项目总结生成
+- 面试 Q&A / STAR 草稿生成
 
-仓库里的不少规则和生成逻辑还需要更多真实材料继续打磨，欢迎体验、测试和提建议，一起把项目做得更稳。
+仍在增强：
+
+- `doc_knowledge` 知识层
+- 更多行业 / 岗位样本
+- 更细粒度的 AI 味和夸大检测
+- 更完整的测试覆盖
 
 ## 设计原则
 
 - 不编造数字，没有稳定指标就明确标注“待补量化 / 待补证据”
 - 不只看代码，也重视业务背景和上下游流程
 - 简历表达按目标岗位校准，而不是统一套模板
-- 对 AI 总结味重或可能夸大的内容做显式提醒
+- 对 AI 味重或可能夸大的内容做显式提醒
 - 优先产出“可投、可讲、可追问展开”的材料
 
 ## 致谢与来源
 
 这个仓库基于原项目做了面向“实习简历整理 / 面试复盘”场景的二次开发与定向重构。
 
-在当前版本里，主流程主要聚焦于：
+当前主流程聚焦于：
 
 `achievement_audit -> resume_rank -> interview_pack`
 
@@ -262,13 +296,11 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 
 `doc_knowledge`
 
-感谢原项目开发者提供的基础工作流与思路，原始项目传送门：
+感谢原项目开发者提供基础工作流与思路，原始项目：
 
 - `https://github.com/LiuMengxuan04/shushu-internship-tool`
 
 ## 参与贡献
-
-欢迎一起完善这个项目。
 
 如果你想改进成果抽取、简历改写、面试表达、测试覆盖或文档内容，建议先阅读 [CONTRIBUTING.md](./CONTRIBUTING.md)，也欢迎直接提交 Issue 或 PR。
 
