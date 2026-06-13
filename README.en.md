@@ -14,9 +14,26 @@ Shushu audits achievements and evidence first, ranks them against a target JD, a
 
 - [Run The Demo First](#3-minute-demo)
 - [See Sample Outputs](#what-the-output-looks-like)
+- [See Recent Updates](#recent-updates)
 - [Use Your Own Materials](#use-your-own-materials)
 - [Naming Notes](#naming-notes)
 - [Read The Security Reminder](#security-reminder)
+
+## Recent Updates
+
+The workflow has recently been tightened around a `model-first, script-second` direction.
+
+- `achievement_audit` now prefers `structured_extract_path` or inline `structured_extract` whenever you provide them in `sources.json`
+- if a structured extract is present in the same run, plain `business_docs` are treated as business-context support instead of generating extra achievement candidates that can pollute the main flow
+- `resume_rank` has been simplified away from sample-specific title mappings and now relies more on structured fields such as `task`, `actions`, `metrics`, and `business_value`
+- `interview_pack` now accepts `resume_rank.json` directly via `ranked_achievements`, so the end-to-end handoff is stable
+
+If you are integrating your own materials, the recommended order is now:
+
+1. Prepare a clean `project_summary.md` or equivalent raw notes.
+2. If the material is long or semantically dense, add a `structured_extract.json`.
+3. Wire that file into `sources.json` with `structured_extract_path`.
+4. Let `business_docs` focus on business context and workflow framing.
 
 ## What Problem It Solves
 
@@ -156,9 +173,10 @@ Optional enhancement:
 Recommended order:
 
 1. Prepare `sources.json` with repo paths, project notes, and business docs.
-2. Run `achievement_audit` to inspect extracted achievements, evidence, and risk flags.
-3. Run `resume_rank` to see which achievements best fit the target role.
-4. Run `interview_pack` to convert the result into STAR material, project intros, and interview Q&A.
+2. Prefer a structured extraction file for dense project notes, then point `structured_extract_path` to it from the corresponding `project_summary` source.
+3. Run `achievement_audit` to inspect extracted achievements, evidence, and risk flags.
+4. Run `resume_rank` to see which achievements best fit the target role.
+5. Run `interview_pack` to convert the result into STAR material, project intros, and interview Q&A.
 
 ## Use Your Own Materials
 
@@ -170,12 +188,34 @@ python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt -
 python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role llm-application-intern --out reports/interview
 ```
 
+Recommended `sources.json` pattern for model-first extraction:
+
+```json
+{
+  "sources": [
+    {
+      "source_type": "project_summary",
+      "path_or_text": "your_materials/project_summary.md",
+      "title": "GUI Agent intern summary",
+      "structured_extract_path": "your_materials/structured_extract.json"
+    },
+    {
+      "source_type": "business_docs",
+      "path_or_text": "your_materials/business_overview.md",
+      "title": "business overview",
+      "knowledge_mode": "basic_rag"
+    }
+  ]
+}
+```
+
 For the minimal input structure, see [examples/minimal_input](./examples/minimal_input/):
 
 - `sources.json`: input index that ties repos, summaries, and business docs together
 - `project_summary.md`: a long raw summary is fine; the tool is meant to break it down first
 - `business_overview.md`: useful for business context, upstream/downstream flow, and problem framing
 - `target_jd.txt`: used for ranking and wording calibration
+
 
 If you also want lightweight business-doc querying, run:
 

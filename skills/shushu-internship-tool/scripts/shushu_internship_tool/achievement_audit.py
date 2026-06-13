@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import html
@@ -9,8 +9,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .common import ensure_dir, load_json, markdown_table, write_json, write_text
+from .common import ensure_dir, load_json, markdown_table, normalize_list, write_json, write_text
 from .doc_knowledge import build_knowledge_base, extract_terms, load_documents, query_knowledge
+from .model_extract import load_structured_extract
 
 
 EXCLUDED_DIRS = {
@@ -43,6 +44,7 @@ LANGUAGE_SUFFIXES = {
 ALLOWED_SOURCE_TYPES = {"code_repo", "project_summary", "business_docs"}
 SECTION_ITEM_RE = re.compile(r"^\s*(\d+)[\.\u3001]\s*(.+)$")
 HEADING_RE = re.compile(r"^\s*#{2,4}\s*(.+?)\s*$")
+PROJECT_HEADING_RE = re.compile(r"^(?:项目|专题|方向)\s*[一二三四五六七八九十0-9]+[\s:：]*(.+)$")
 METRIC_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("F1", re.compile(r"\bF1\s*[:：]?\s*(\d+(?:\.\d+)?%)", re.IGNORECASE)),
     ("Recall", re.compile(r"\bRecall\s*[:：]?\s*(\d+(?:\.\d+)?%)", re.IGNORECASE)),
@@ -51,6 +53,14 @@ METRIC_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("时长", re.compile(r"(\d+(?:\.\d+)?\s*(?:ms|s|分钟|小时|天))", re.IGNORECASE)),
 ]
 GENERIC_METRIC_RE = re.compile(r"\d+(?:\.\d+)?%\b|\d+(?:\.\d+)?\s*(?:ms|s|分钟|小时|天)", re.IGNORECASE)
+LOW_VALUE_WORKLOAD_RE = re.compile(
+    r"(?i)(?:read|scan|process|review|读取|扫描|处理|梳理).{0,12}\d+\s*(?:个|份|条|files?|repos?|文件|仓库)",
+    re.IGNORECASE,
+)
+VALUE_SIGNAL_RE = re.compile(
+    r"(?i)(?:减少|降低|提升|优化|节省|支持|避免|拦截|过滤|定位|归因|恢复|稳定|吞吐|准确率|召回率|一致率|F1|Recall|Precision|成本|效率|误判|耗时|延迟|成功率)",
+    re.IGNORECASE,
+)
 
 AI_SUMMARY_MARKERS = {
     "一句话定位",
@@ -59,7 +69,7 @@ AI_SUMMARY_MARKERS = {
     "核心职责",
     "STAR 法则",
     "技术栈",
-    "数据飞轮闭环",
+    "数据闭环",
 }
 OVERCLAIM_MARKERS = {
     "独立设计并实现",
@@ -76,6 +86,7 @@ SUMMARY_NOISE_PREFIXES = (
     "项目描述",
     "一句话定位",
     "业务背景",
+    "实习背景",
     "核心问题",
     "项目目标",
     "当前工作主要聚焦",
@@ -95,12 +106,20 @@ NON_ACHIEVEMENT_SECTIONS = {
     "技术栈",
     "适合后续继续补充的数据",
 }
-ACHIEVEMENT_SECTION_TITLE_MAP = {
-    "P-E-R 三阶段无效数据检测流水线": "自动评估任务完成情况优化",
-    "评估 Prompt 与 Judge 策略优化": "自动评估任务完成情况优化",
-    "异步评估服务工程化": "异步评估服务工程化",
-    "错误标签自动化归因": "错误标签自动化判别",
+LEGACY_TITLE_ALIASES: dict[str, str] = {}
+GENERIC_HEADING_LABELS = {
+    "核心工作",
+    "主要工作",
+    "关键工作",
+    "核心方案",
+    "工作内容",
+    "项目内容",
+    "项目经历",
+    "项目经验",
 }
+TITLE_INTENT_RULES: list[tuple[str, tuple[str, ...]]] = []
+TITLE_VERB_PREFIX_RE = re.compile(r"^(?:负责|设计|搭建|构建|实现|优化|推进|完善|补充|建立|沉淀|基于|通过|围绕|针对|将|把)")
+TITLE_SPLIT_RE = re.compile(r"[，。；;：:\n]")
 
 
 def collect_repo_files(repo: Path, max_files: int = 2000) -> list[Path]:
@@ -140,6 +159,8 @@ def validate_sources(sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "path_or_text": path_or_text,
                 "title": str(raw.get("title") or Path(path_or_text).name or source_type).strip(),
                 "knowledge_mode": raw.get("knowledge_mode"),
+                "structured_extract_path": str(raw.get("structured_extract_path") or "").strip() or None,
+                "structured_extract": raw.get("structured_extract"),
             }
         )
     return normalized
@@ -151,7 +172,7 @@ def build_source_bundle(path_or_text: str, source_type: str, title: str | None =
 
 
 def sentence_candidates(text: str) -> list[str]:
-    return [item.strip(" -\t") for item in re.split(r"[。！？!?;\n]", text) if len(item.strip(" -\t")) >= 8]
+    return [item.strip(" -\t") for item in re.split(r"[。！？；;\n]", text) if len(item.strip(" -\t")) >= 8]
 
 
 def clean_summary_line(text: str, title: str = "") -> str:
@@ -214,6 +235,8 @@ def choose_action_lines(lines: list[str], task: str, metrics: list[str], limit: 
             continue
         if any(metric in line for metric in metrics):
             continue
+        if is_low_value_workload_text(line):
+            continue
         if line not in actions:
             actions.append(line)
         if len(actions) >= limit:
@@ -224,11 +247,11 @@ def choose_action_lines(lines: list[str], task: str, metrics: list[str], limit: 
 def choose_interview_explain(title: str, business_context: str, task: str, actions: list[str], outcome: str) -> str:
     scope = task or title
     if outcome and outcome != scope:
-        return f"{scope}，核心结果是 {outcome}"
+        return f"{scope}，核心结果是{outcome}"
     if actions:
-        return f"{scope}，具体包括 {actions[0]}"
+        return f"{scope}，具体包括{actions[0]}"
     if business_context:
-        return f"{scope}，这块工作服务于 {business_context}"
+        return f"{scope}，这块工作服务于{business_context}"
     return scope
 
 
@@ -257,11 +280,11 @@ def best_metric_from_texts(metrics: list[str], texts: list[str]) -> str:
 def choose_business_value(title: str, actions: list[str], business_context: str) -> str:
     if "异步评估服务" in title:
         return "支撑采集端与评估端解耦，并让评估流程可以服务化运行"
-    if "自动评估任务完成情况优化" in title:
+    if "自动评估" in title or "判定优化" in title:
         return "减少无效数据对评估结果的干扰，并提升任务完成判断稳定性"
-    if "错误标签自动化判别" in title:
+    if "错误标签" in title or "归因" in title:
         return "支撑失败 case 归因和高频问题定位，方便后续策略迭代"
-    preferred = ("降低", "减少", "提升", "支持", "区分", "过滤", "定位", "解耦", "自动化")
+    preferred = ("降低", "减少", "提升", "支持", "区分", "过滤", "定位", "解释", "自动化")
     for keyword in preferred:
         for action in actions:
             if keyword in action:
@@ -271,21 +294,6 @@ def choose_business_value(title: str, actions: list[str], business_context: str)
         if snippets:
             return snippets[0]
     return title
-
-
-def build_interview_safe_explain(title: str, task: str, actions: list[str], best_metric: str, business_value: str) -> str:
-    scope = task or title
-    if "异步评估服务" in title:
-        return f"我主要做的是{scope}，这项工作的价值主要在于{business_value}" + (f"，目前能确认的结果是{best_metric}" if best_metric else "")
-    if "自动评估任务完成情况优化" in title:
-        return f"我主要做的是{scope}，这项工作的价值主要在于{business_value}" + (f"，目前能确认的结果是{best_metric}" if best_metric else "")
-    if "错误标签自动化判别" in title:
-        return f"我主要做的是{scope}，这项工作的价值主要在于{business_value}" + (f"，目前还在持续补充量化结果" if not best_metric else f"，目前能确认的结果是{best_metric}")
-    if best_metric:
-        return f"我主要做的是{scope}，这项工作的价值主要在于{business_value}，目前能确认的结果是{best_metric}"
-    if actions:
-        return f"我主要做的是{scope}，具体包括{actions[0]}，这项工作的价值主要在于{business_value}"
-    return f"我主要做的是{scope}，这项工作的价值主要在于{business_value}"
 
 
 def build_interview_safe_explain(title: str, task: str, actions: list[str], best_metric: str, business_value: str) -> str:
@@ -349,6 +357,30 @@ def detect_overclaim_flags(text: str) -> tuple[list[str], list[str]]:
     return (["存在可能夸大表述，需确认边界"], evidence[:3]) if evidence else ([], [])
 
 
+def is_low_value_workload_text(text: str) -> bool:
+    clean = " ".join(str(text).split())
+    generic_workload_re = re.compile(
+        r"(?i)(?:\bread\b|\bscan\b|\bprocess\b|\breview\b|[\u8bfb\u626b\u63cf\u5904\u7406\u68b3\u7406]{1,3}).{0,12}\d+\s*(?:[\u4e2a\u4efd\u6761]|\bfiles?\b|\brepos?\b|\u6587\u4ef6|\u4ed3\u5e93)"
+    )
+    value_signal_re = re.compile(
+        r"(?i)(?:\u51cf\u5c11|\u964d\u4f4e|\u63d0\u5347|\u4f18\u5316|\u8282\u7701|\u907f\u514d|f1|recall|precision|accuracy|latency|throughput|\d+(?:\.\d+)?%)"
+    )
+    return bool(generic_workload_re.search(clean)) and not bool(value_signal_re.search(clean))
+
+
+def filter_meaningful_metrics(metrics: list[str]) -> list[str]:
+    kept: list[str] = []
+    for metric in metrics:
+        clean = metric.strip()
+        if not clean:
+            continue
+        if is_low_value_workload_text(clean):
+            continue
+        if clean not in kept:
+            kept.append(clean)
+    return kept[:6]
+
+
 def extract_metrics(text: str) -> list[str]:
     metrics: list[str] = []
     for label, pattern in METRIC_PATTERNS:
@@ -359,7 +391,7 @@ def extract_metrics(text: str) -> list[str]:
             metrics.append(value)
     if not metrics:
         metrics.extend(match.group(0).strip() for match in GENERIC_METRIC_RE.finditer(text))
-    return list(dict.fromkeys(metrics))[:6]
+    return filter_meaningful_metrics(list(dict.fromkeys(metrics)))
 
 
 def detect_business_context(text: str) -> str:
@@ -372,122 +404,228 @@ def detect_business_context(text: str) -> str:
             secondary.append(sentence)
     hits = primary[:1] + secondary[:1]
     joined = "；".join(hits)
-    return joined[:120].rstrip("；，。 ")
+    return joined[:120].rstrip("；，。")
 
 
-def normalize_title(text: str) -> str:
-    title = re.sub(r"[（(].*?[)）]", "", text).strip(" ：: ")
-    replacements = {
-        "无效数据检测体系设计": "无效数据检测流水线",
-        "无效数据检测体系设计（P-E-R 流水线）": "无效数据检测流水线",
-        "LLM-as-Judge 评估 Prompt 工程": "自动评估任务完成情况优化",
-        "错误标签自动化归因": "错误标签自动化判别",
-        "错误标签自动化判别：针对任务完成失败的 case": "错误标签自动化判别",
-    }
-    return replacements.get(title, title[:24] or "核心成果")
 
 
-def infer_title_from_block(block: str, fallback: str) -> str:
-    text = f"{fallback}\n{block}"
-    if any(keyword in text for keyword in ("错误标签", "归因", "失败 case", "任务失败")):
-        return "错误标签自动化判别"
-    if any(keyword in text for keyword in ("自动评估任务完成情况优化", "任务完成情况")):
-        return "自动评估任务完成情况优化"
-    if any(keyword in text for keyword in ("P-E-R", "无效数据")):
-        return "无效数据检测流水线"
-    if any(keyword in text for keyword in ("Prompt", "LLM-as-Judge")):
-        return "LLM 评估 Prompt 工程"
-    if any(keyword in text for keyword in ("FastAPI", "asyncio", "异步评估服务", "FileWatcher")):
-        return "异步评估服务工程化"
-    return normalize_title(fallback)
+def is_generic_work_heading(text: str) -> bool:
+    normalized = normalize_title(text)
+    if not normalized:
+        return False
+    work_headings = (
+        "\u6838\u5fc3\u804c\u8d23",
+        "\u6838\u5fc3\u65b9\u6848",
+        "\u4e3b\u8981\u5de5\u4f5c",
+        "\u5173\u952e\u5de5\u4f5c",
+        "\u6838\u5fc3\u5de5\u4f5c",
+        "\u5de5\u4f5c\u5185\u5bb9",
+        "\u9879\u76ee\u5185\u5bb9",
+        "\u9879\u76ee\u7ecf\u5386",
+        "\u9879\u76ee\u7ecf\u9a8c",
+    )
+    return any(normalized == heading or normalized.startswith(heading) for heading in work_headings)
+
+
+def is_business_context_heading(text: str) -> bool:
+    normalized = normalize_title(text)
+    if not normalized:
+        return False
+    business_headings = (
+        "\u4e00\u53e5\u8bdd\u5b9a\u4f4d",
+        "\u4e1a\u52a1\u80cc\u666f",
+        "\u5b9e\u4e60\u80cc\u666f",
+        "\u6838\u5fc3\u95ee\u9898",
+        "\u9879\u76ee\u80cc\u666f",
+        "\u9879\u76ee\u76ee\u6807",
+    )
+    return any(normalized == heading or normalized.startswith(heading) for heading in business_headings)
 
 
 def split_project_summary(text: str, title: str) -> list[dict[str, Any]]:
-    lines = [line.rstrip() for line in text.splitlines()]
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    project_heading_re = re.compile(r"^(?:\u9879\u76ee|\u4e13\u9898|\u65b9\u5411)\s*[\u4e00-\u9fa5\d]+\s*[:：]?\s*(.+)$")
     business_context_lines: list[str] = []
-    sections_by_title: dict[str, list[str]] = defaultdict(list)
-    current_heading = ""
-    current_subheading = ""
-    current_lines: list[str] = []
 
-    def flush_current() -> None:
-        nonlocal current_lines, current_subheading
-        if not current_lines:
+    project_blocks: list[dict[str, Any]] = []
+    current_project_title = ""
+    current_project_lines: list[str] = []
+    for stripped in lines:
+        heading_match = HEADING_RE.match(stripped)
+        heading_text = heading_match.group(1).strip() if heading_match else stripped
+        project_match = project_heading_re.match(heading_text)
+        if project_match:
+            if current_project_title and current_project_lines:
+                project_blocks.append({"heading": current_project_title, "text": "\n".join(current_project_lines)})
+            current_project_title = project_match.group(1).strip() or heading_text
+            current_project_lines = []
+            continue
+        if current_project_title:
+            current_project_lines.append(stripped)
+        else:
+            business_context_lines.append(stripped)
+    if current_project_title and current_project_lines:
+        project_blocks.append({"heading": current_project_title, "text": "\n".join(current_project_lines)})
+    if project_blocks:
+        business_context = "\n".join(line for line in business_context_lines if clean_summary_line(line, title=title))
+        return [
+            {
+                "title": infer_title_from_block(block["text"], block["heading"]),
+                "text": block["text"],
+                "business_context": business_context,
+            }
+            for block in project_blocks
+        ]
+
+    sections: list[dict[str, Any]] = []
+    current_section_title = ""
+    current_section_lines: list[str] = []
+    mode = "context"
+
+    def flush_section() -> None:
+        nonlocal current_section_title, current_section_lines
+        if not current_section_lines:
+            current_section_title = ""
             return
-        block_text = "\n".join(current_lines).strip()
-        if not block_text:
-            current_lines = []
-            return
-        mapped_title = ACHIEVEMENT_SECTION_TITLE_MAP.get(current_subheading or current_heading, "")
-        if mapped_title:
-            sections_by_title[mapped_title].append(block_text)
-        current_lines = []
+        block_text = "\n".join(current_section_lines).strip()
+        section_title = infer_title_from_block(block_text, current_section_title or title) or normalize_title(title) or "section"
+        sections.append(
+            {
+                "title": section_title,
+                "text": block_text,
+                "business_context": "\n".join(business_context_lines),
+            }
+        )
+        current_section_title = ""
+        current_section_lines = []
 
-    def start_section(section_title: str) -> None:
-        nonlocal current_subheading, current_lines
-        flush_current()
-        current_subheading = section_title
-        current_lines = [section_title]
+    for stripped in lines:
+        heading_match = HEADING_RE.match(stripped)
+        heading_text = heading_match.group(1).strip() if heading_match else stripped
+        normalized_heading = normalize_title(heading_text)
 
-    for raw_line in lines:
-        stripped = raw_line.strip()
-        if not stripped:
+        if is_business_context_heading(normalized_heading):
+            if current_section_lines:
+                flush_section()
+            mode = "context"
+            continue
+        if is_generic_work_heading(normalized_heading):
+            if current_section_lines:
+                flush_section()
+            mode = "work"
+            current_section_title = ""
             continue
 
-        heading_match = HEADING_RE.match(stripped)
-        if heading_match:
-            heading = heading_match.group(1).strip()
-            if heading in NON_ACHIEVEMENT_SECTIONS or heading == "核心方案":
-                flush_current()
-                current_heading = heading
-                current_subheading = ""
-                continue
-            if heading in ACHIEVEMENT_SECTION_TITLE_MAP:
-                start_section(heading)
-                continue
-            if current_heading == "核心方案" and heading not in NON_ACHIEVEMENT_SECTIONS:
-                start_section(heading)
-                continue
+        numbered_match = SECTION_ITEM_RE.match(stripped)
+        if numbered_match:
+            if current_section_lines:
+                flush_section()
+            mode = "work"
+            current_section_title = normalize_title(numbered_match.group(2).strip())
+            current_section_lines = []
+            continue
 
-        if current_heading == "业务背景":
+        if mode == "context":
             business_context_lines.append(stripped)
             continue
 
-        if current_heading == "核心方案":
-            numbered_match = re.match(r"^####\s*\d+\.\s*(.+)$", stripped)
-            if numbered_match:
-                subheading = numbered_match.group(1).strip()
-                if subheading in ACHIEVEMENT_SECTION_TITLE_MAP:
-                    start_section(subheading)
-                    continue
-            if stripped.startswith("**"):
-                continue
+        if mode == "work":
+            if not current_section_title:
+                current_section_title = normalize_title(title)
+            current_section_lines.append(stripped)
 
-        if current_subheading:
-            current_lines.append(stripped)
+    if current_section_lines:
+        flush_section()
 
-    flush_current()
+    if sections:
+        return sections
 
+    fallback_lines = [line for line in lines if clean_summary_line(line, title=title)]
     business_context = "\n".join(business_context_lines)
-    merged_sections = [{"title": key, "text": "\n".join(value)} for key, value in sections_by_title.items() if value]
+    return [
+        {
+            "title": infer_title_from_block(line, title) or (title or f"section-{index}"),
+            "text": line,
+            "business_context": business_context,
+        }
+        for index, line in enumerate(fallback_lines, start=1)
+    ]
 
-    if not merged_sections:
-        fallback_lines = [line.strip() for line in lines if line.strip() and clean_summary_line(line)]
-        if len(fallback_lines) >= 2:
-            for index, line in enumerate(fallback_lines, start=1):
-                inferred_title = infer_title_from_block(line, title)
-                merged_sections.append(
-                    {
-                        "title": inferred_title if inferred_title else (title or f"section-{index}"),
-                        "text": line,
-                        "business_context": business_context,
-                    }
-                )
-            return merged_sections
 
-    for section in merged_sections:
-        section["business_context"] = business_context
-    return merged_sections
+def normalize_title(text: str) -> str:
+    raw = str(text or "").strip()
+    if not raw:
+        return ""
+    raw = re.sub(r"^#+\s*", "", raw)
+    raw = re.sub(r"^(?:\u9879\u76ee|\u4e13\u9898|\u65b9\u5411)\s*[\u4e00-\u9fa5\d]+\s*[:：]?\s*", "", raw)
+    raw = re.sub(r"^\d+[\.\u3001]\s*", "", raw)
+    raw = re.sub(r"[（(][^）)]*[）)]", "", raw)
+    raw = " ".join(raw.replace("\n", " ").split()).strip(" -:：")
+    raw = TITLE_VERB_PREFIX_RE.sub("", raw).strip(" -:：")
+    return raw[:24] or "\u6838\u5fc3\u6210\u679c"
+
+
+def compress_title_candidate(text: str) -> str:
+    raw = normalize_title(text)
+    if not raw:
+        return ""
+    clause = next((part.strip() for part in TITLE_SPLIT_RE.split(raw) if part.strip()), raw)
+    clause = TITLE_VERB_PREFIX_RE.sub("", clause).strip(" -:：")
+    clause = re.sub(r"^(?:用于|面向|针对)", "", clause).strip(" -:：")
+    if len(clause) > 24:
+        clause = clause[:24].rstrip(" -:：")
+    if len(clause) < 4:
+        return ""
+    return clause
+
+
+def title_from_text_intent(text: str) -> tuple[str, int]:
+    text = str(text or "")
+    candidates = [compress_title_candidate(line) for line in split_summary_block(text)]
+    candidates.extend(compress_title_candidate(sentence) for sentence in sentence_candidates(text))
+    candidates = [candidate for candidate in candidates if candidate]
+    for candidate in candidates:
+        if is_generic_work_heading(candidate) or is_business_context_heading(candidate):
+            continue
+        score = 1
+        if re.search(r"[A-Za-z]{2,}|[\u4e00-\u9fff]{4,}", candidate):
+            score += 1
+        if any(token in text for token in ("设计", "搭建", "构建", "实现", "优化", "归因", "过滤", "评估", "服务", "Prompt")):
+            score += 1
+        if extract_metrics(text) or VALUE_SIGNAL_RE.search(text):
+            score += 1
+        return candidate, score
+    return "", 0
+
+
+def is_informative_heading(text: str) -> bool:
+    clean = normalize_title(text)
+    if not clean:
+        return False
+    if is_generic_work_heading(clean) or is_business_context_heading(clean):
+        return False
+    return len(clean) >= 4
+
+
+def infer_title_from_block(block: str, fallback: str) -> str:
+    normalized_fallback = normalize_title(fallback)
+    fallback_lower = normalized_fallback.lower()
+    looks_like_source_label = any(token in fallback_lower for token in ("summary", "overview", "weekly", "business", "notes"))
+    if is_informative_heading(fallback) and not looks_like_source_label:
+        return normalized_fallback
+    first_line = next((clean_summary_line(line, title=normalized_fallback) for line in block.splitlines() if clean_summary_line(line, title=normalized_fallback)), "")
+    if first_line:
+        compressed = compress_title_candidate(first_line)
+        if compressed and not is_generic_work_heading(compressed) and not is_business_context_heading(compressed):
+            return compressed
+    inferred_title, score = title_from_text_intent(f"{fallback}\n{block}")
+    if score >= 2:
+        return inferred_title
+    return normalized_fallback
+
+
+
+
 
 
 def derive_gaps(metrics: list[str], business_context: str, source_types: list[str], evidence_count: int) -> list[str]:
@@ -517,10 +655,26 @@ def derive_risk_flags(item: dict[str, Any]) -> list[str]:
 
 
 def derive_user_check_fields(item: dict[str, Any]) -> tuple[list[str], list[str]]:
-    return (
-        list(dict.fromkeys(item.get("user_check_flags", [])))[:6],
-        list(dict.fromkeys(item.get("user_check_evidence", [])))[:6],
-    )
+    flags = list(dict.fromkeys(item.get("user_check_flags", [])))
+    evidence = list(dict.fromkeys(item.get("user_check_evidence", [])))
+    candidate_texts = [
+        item.get("task", ""),
+        item.get("outcome", ""),
+        *item.get("actions", []),
+        *item.get("metrics", []),
+        *[str(entry.get("excerpt_summary") or "") for entry in item.get("evidence", [])],
+    ]
+    weak_claims: list[str] = []
+    for text in candidate_texts:
+        if not text:
+            continue
+        for sentence in sentence_candidates(str(text)) or [str(text)]:
+            if is_low_value_workload_text(sentence):
+                weak_claims.append(sentence)
+    if weak_claims:
+        flags.append("文件处理量不等于成果价值，需补充业务结果或工程收益")
+        evidence.extend(weak_claims[:2])
+    return (list(dict.fromkeys(flags))[:6], list(dict.fromkeys(evidence))[:6])
 
 
 def derive_readiness_reason(metrics: list[str], source_types: list[str], business_context: str) -> str:
@@ -598,7 +752,7 @@ def merge_similar_achievements(items: list[dict[str, Any]]) -> list[dict[str, An
                 continue
             other = items[other_index]
             overlap = current_tokens & achievement_tokens(other)
-            should_merge_cross_source = len(overlap) >= 4 and (
+            should_merge_cross_source = len(overlap) >= 2 and (
                 ("business_docs" in current["source_types"] and "project_summary" in other["source_types"])
                 or ("project_summary" in current["source_types"] and "business_docs" in other["source_types"])
             )
@@ -628,7 +782,7 @@ def analyze_code_repo(bundle: dict[str, Any]) -> tuple[dict[str, Any], list[dict
             {
                 "source_type": "code_repo",
                 "source_ref": rel.as_posix(),
-                "excerpt_summary": f"代码路径线索: {rel.as_posix()}",
+                "excerpt_summary": f"浠ｇ爜璺緞绾跨储: {rel.as_posix()}",
                 "tags": extract_terms(rel.as_posix(), top_k=6),
                 "confidence": 0.65,
                 "cluster_key": bundle["title"],
@@ -646,7 +800,52 @@ def analyze_code_repo(bundle: dict[str, Any]) -> tuple[dict[str, Any], list[dict
     return summary, evidence
 
 
-def analyze_textual_bundle(bundle: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any] | None]:
+def structured_extract_to_evidence(
+    extracted_items: list[dict[str, Any]],
+    bundle: dict[str, Any],
+    source_ref: str,
+) -> list[dict[str, Any]]:
+    evidence: list[dict[str, Any]] = []
+    for item in extracted_items:
+        title = normalize_title(str(item.get("title") or bundle["title"]))
+        actions = normalize_list(item.get("actions"))
+        task = str(item.get("task") or title).strip()
+        outcome = str(item.get("outcome") or "").strip()
+        metrics = normalize_list(item.get("metrics"))
+        excerpt_parts = [task, *actions[:3], outcome]
+        excerpt = " ".join(part for part in excerpt_parts if part).strip()
+        if not excerpt:
+            excerpt = title
+        item_metrics = metrics or extract_metrics(excerpt)
+        evidence.append(
+            {
+                "source_type": bundle["source_type"],
+                "source_ref": source_ref,
+                "excerpt_summary": excerpt[:260],
+                "tags": extract_terms(" ".join([title, task, outcome, *actions]), top_k=12),
+                "confidence": float(item.get("confidence") or 0.92),
+                "cluster_key": title,
+                "metrics": item_metrics,
+                "seed_title": title,
+                "business_context": str(item.get("business_context") or "").strip(),
+                "user_check_flags": normalize_list(item.get("user_check_flags")),
+                "user_check_evidence": normalize_list(item.get("evidence")),
+                "task_hint": task,
+                "actions_hint": actions,
+                "outcome_hint": outcome,
+                "business_value_hint": str(item.get("business_value") or "").strip(),
+                "resume_ready_hint": bool(item.get("keep_for_resume", True)),
+                "project_title": str(item.get("project_title") or "").strip(),
+                "extraction_backend": "structured_model",
+            }
+        )
+    return evidence
+
+
+def analyze_textual_bundle(
+    bundle: dict[str, Any],
+    prefer_context_only_business_docs: bool = False,
+) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any] | None]:
     raw = bundle["path_or_text"]
     path = Path(raw)
     documents = load_documents([raw]) if path.exists() else [{"path": raw, "title": bundle["title"], "text": raw}]
@@ -655,6 +854,31 @@ def analyze_textual_bundle(bundle: dict[str, Any]) -> tuple[dict[str, Any], list
     knowledge = None
     if bundle["source_type"] == "business_docs":
         knowledge = build_knowledge_base(documents, mode=bundle.get("knowledge_mode"))
+    structured_items = load_structured_extract(bundle)
+    if structured_items:
+        evidence: list[dict[str, Any]] = []
+        for doc in documents:
+            evidence.extend(structured_extract_to_evidence(structured_items, bundle, doc["title"]))
+        summary = {
+            "type": bundle["source_type"],
+            "title": bundle["title"],
+            "documents": [doc["title"] for doc in documents],
+            "top_terms": extract_terms(joined, top_k=14),
+            "metric_hits": extract_metrics(joined),
+            "extraction_backend": "structured_model",
+        }
+        return summary, evidence, knowledge
+
+    if prefer_context_only_business_docs and bundle["source_type"] == "business_docs":
+        summary = {
+            "type": bundle["source_type"],
+            "title": bundle["title"],
+            "documents": [doc["title"] for doc in documents],
+            "top_terms": extract_terms(joined, top_k=14),
+            "metric_hits": extract_metrics(joined),
+            "extraction_backend": "knowledge_only",
+        }
+        return summary, [], knowledge
 
     evidence: list[dict[str, Any]] = []
     for doc in documents:
@@ -667,6 +891,12 @@ def analyze_textual_bundle(bundle: dict[str, Any]) -> tuple[dict[str, Any], list
             user_check_evidence = [*ai_evidence, *overclaim_evidence]
             sections = split_project_summary(text, bundle["title"])
             for section in sections:
+                section_check_flags = list(user_check_flags)
+                section_check_evidence = list(user_check_evidence)
+                weak_sentences = [sentence for sentence in sentence_candidates(section["text"]) if is_low_value_workload_text(sentence)]
+                if weak_sentences:
+                    section_check_flags.append("文件处理量不等于成果价值，需补充业务结果或工程收益")
+                    section_check_evidence.extend(weak_sentences[:2])
                 evidence.append(
                     {
                         "source_type": bundle["source_type"],
@@ -678,8 +908,8 @@ def analyze_textual_bundle(bundle: dict[str, Any]) -> tuple[dict[str, Any], list
                         "metrics": extract_metrics(section["text"]),
                         "seed_title": section["title"],
                         "business_context": detect_business_context(section.get("business_context", "") or business_context),
-                        "user_check_flags": user_check_flags,
-                        "user_check_evidence": user_check_evidence,
+                        "user_check_flags": section_check_flags,
+                        "user_check_evidence": section_check_evidence,
                     }
                 )
             if not sections:
@@ -701,6 +931,12 @@ def analyze_textual_bundle(bundle: dict[str, Any]) -> tuple[dict[str, Any], list
                     )
         else:
             for sentence in sentence_candidates(text)[:20]:
+                inferred_title = infer_title_from_block(sentence, bundle["title"])
+                _, score = title_from_text_intent(sentence)
+                if inferred_title == normalize_title(bundle["title"]) and score == 0:
+                    inferred_title = choose_cluster_key(extract_terms(sentence, top_k=8), bundle["title"])
+                if inferred_title == normalize_title(bundle["title"]) and score == 0:
+                    continue
                 evidence.append(
                     {
                         "source_type": bundle["source_type"],
@@ -708,8 +944,9 @@ def analyze_textual_bundle(bundle: dict[str, Any]) -> tuple[dict[str, Any], list
                         "excerpt_summary": sentence[:180],
                         "tags": extract_terms(sentence, top_k=8),
                         "confidence": 0.75 if bundle["source_type"] == "business_docs" else 0.8,
-                        "cluster_key": global_anchor,
+                        "cluster_key": inferred_title,
                         "metrics": extract_metrics(sentence),
+                        "seed_title": inferred_title,
                     }
                 )
 
@@ -719,6 +956,7 @@ def analyze_textual_bundle(bundle: dict[str, Any]) -> tuple[dict[str, Any], list
         "documents": [doc["title"] for doc in documents],
         "top_terms": extract_terms(joined, top_k=14),
         "metric_hits": extract_metrics(joined),
+        "extraction_backend": "rules",
     }
     return summary, evidence, knowledge
 
@@ -740,12 +978,36 @@ def merge_achievements(evidence_items: list[dict[str, Any]], knowledge_entries: 
             knowledge_hits.extend(query_knowledge(entry, " ".join(top_tags[:4]) or cluster_key, top_k=1))
         textual_business_context = next((item.get("business_context", "") for item in items if item.get("business_context")), "")
         knowledge_context = knowledge_hits[0]["text"][:200] if knowledge_hits else ""
-        business_context = knowledge_context or textual_business_context
+        extraction_backends = sorted({str(item.get("extraction_backend") or "rules") for item in items})
+        if "structured_model" in extraction_backends and textual_business_context:
+            business_context = textual_business_context
+        else:
+            business_context = knowledge_context or textual_business_context
         background = business_context or (excerpts[0] if excerpts else "")
+        hinted_task = next((str(item.get("task_hint") or "").strip() for item in items if str(item.get("task_hint") or "").strip()), "")
+        hinted_actions = list(
+            dict.fromkeys(
+                action.strip()
+                for item in items
+                for action in normalize_list(item.get("actions_hint"))
+                if action.strip()
+            )
+        )[:4]
+        hinted_outcome = next((str(item.get("outcome_hint") or "").strip() for item in items if str(item.get("outcome_hint") or "").strip()), "")
         task, actions, outcome = build_task_and_actions(normalize_title(str(items[0].get("seed_title") or cluster_key)), excerpts, metrics)
+        if hinted_task:
+            task = hinted_task
+        if hinted_actions:
+            actions = hinted_actions
+        if hinted_outcome:
+            outcome = hinted_outcome
         normalized_title = normalize_title(str(items[0].get("seed_title") or cluster_key))
         best_metric = best_metric_from_texts(metrics, excerpts)
-        business_value = choose_business_value(normalized_title, actions, business_context)
+        business_value_hint = next(
+            (str(item.get("business_value_hint") or "").strip() for item in items if str(item.get("business_value_hint") or "").strip()),
+            "",
+        )
+        business_value = business_value_hint or choose_business_value(normalized_title, actions, business_context)
         achievement = {
             "title": normalized_title,
             "background": background,
@@ -766,7 +1028,7 @@ def merge_achievements(evidence_items: list[dict[str, Any]], knowledge_entries: 
                 for item in items[:8]
             ],
             "confidence": round(sum(item["confidence"] for item in items) / len(items), 3),
-            "resume_ready": bool(metrics),
+            "resume_ready": any(item.get("resume_ready_hint") for item in items) or bool(metrics),
             "source_types": source_types,
             "matched_keywords": top_tags,
             "user_check_flags": list(dict.fromkeys(flag for item in items for flag in item.get("user_check_flags", []))),
@@ -776,6 +1038,7 @@ def merge_achievements(evidence_items: list[dict[str, Any]], knowledge_entries: 
             "core_result": outcome,
             "best_metric": best_metric,
             "business_value": business_value,
+            "extraction_backends": extraction_backends,
             "interview_explain": build_interview_safe_explain(normalized_title, task, actions, best_metric, business_value),
             "resume_safe_bullet_seed": build_resume_seed(normalized_title, task, actions, outcome),
         }
@@ -801,8 +1064,8 @@ def rewrite_business_context(audit: dict[str, Any]) -> str:
         "",
         "## 可直接复用版本",
         "",
-        "- 该项目面向手机 GUI Agent 的数据评估场景，核心目标是降低人工审核和标注成本，让任务完成判断和失败归因更自动化、更稳定。",
-        "- 从工作流角度看，这类系统通常处在 Agent 轨迹采集、任务完成评估、失败 case 归因、数据回流和策略迭代之间。",
+        "- 该项目面向 Agent 评估或业务执行场景，核心目标通常是降低人工审核与标注成本，并让关键判断与失败归因更自动化、更稳定。",
+        "- 从工作流角度看，这类系统通常处在轨迹采集、任务评估、失败 case 归因、数据回流和策略迭代之间。",
         f"- 当前材料里的原始业务线索：{primary}",
     ]
     if secondary:
@@ -812,8 +1075,8 @@ def rewrite_business_context(audit: dict[str, Any]) -> str:
             "",
             "## 面试讲述建议",
             "",
-            "- 对外讲述时，优先强调真实业务痛点、数据规模带来的人工压力，以及你负责的 eval workflow / 自动化打标部分。",
-            "- 如果项目仍在迭代，可以先说明你负责的是哪段链路、当前做到哪里、哪些结果还在持续验证。",
+            "- 对外讲述时，优先强调真实业务痛点、人工成本压力，以及你负责的那段 workflow 或自动化链路。",
+            "- 如果项目仍在迭代，可以先说明你负责的链路范围、当前做到哪里，以及哪些结果还在持续验证。",
         ]
     )
     return "\n".join(parts) + "\n"
@@ -824,13 +1087,17 @@ def audit_sources(sources: list[dict[str, Any]], name: str | None = None) -> dic
     source_summaries: list[dict[str, Any]] = []
     evidence_items: list[dict[str, Any]] = []
     knowledge_entries: list[dict[str, Any]] = []
+    has_structured_source = any(load_structured_extract(bundle) for bundle in validated)
     for bundle in validated:
         if bundle["source_type"] == "code_repo":
             summary, evidence = analyze_code_repo(bundle)
             source_summaries.append(summary)
             evidence_items.extend(evidence)
         else:
-            summary, evidence, knowledge = analyze_textual_bundle(bundle)
+            summary, evidence, knowledge = analyze_textual_bundle(
+                bundle,
+                prefer_context_only_business_docs=has_structured_source,
+            )
             source_summaries.append(summary)
             evidence_items.extend(evidence)
             if knowledge:
@@ -852,6 +1119,7 @@ def audit_sources(sources: list[dict[str, Any]], name: str | None = None) -> dic
         "sources": source_summaries,
         "achievements": achievements,
         "knowledge_modes": [entry["mode"] for entry in knowledge_entries],
+        "extraction_modes": sorted({str(source.get("extraction_backend") or "rules") for source in source_summaries}),
         "missing_information": missing,
     }
 
@@ -884,6 +1152,7 @@ def render_markdown(audit: dict[str, Any]) -> str:
         f"- generated_at: `{audit['generated_at']}`",
         f"- source_count: {audit['source_count']}",
         f"- knowledge_modes: {', '.join(audit['knowledge_modes']) or 'none'}",
+        f"- extraction_modes: {', '.join(audit.get('extraction_modes', [])) or 'rules'}",
         "",
         "## 成果概览",
         "",
@@ -901,7 +1170,9 @@ def render_markdown(audit: dict[str, Any]) -> str:
             source_bits.append(", ".join(f"{lang}:{count}" for lang, count in source["language_counts"][:4]))
         else:
             source_bits.append(", ".join(source.get("top_terms", [])[:8]))
+            source_bits.append(source.get("extraction_backend", "rules"))
         parts.append(f"- {' | '.join(bit for bit in source_bits if bit)}")
+
     parts.extend(["", "## 代表性成果"])
     for item in audit["achievements"][:5]:
         parts.extend(
@@ -930,7 +1201,7 @@ def render_html(audit: dict[str, Any], markdown: str) -> str:
         )
         achievement_cards.append(
             f"""
-            <section class="card">
+            <section class=\"card\">
               <h3>{html.escape(item['title'])}</h3>
               <p><strong>背景:</strong> {html.escape(item['background'])}</p>
               <p><strong>结果:</strong> {html.escape(item['outcome'] or '待补结果')}</p>
@@ -947,13 +1218,13 @@ def render_html(audit: dict[str, Any], markdown: str) -> str:
     )
     missing = "".join(f"<li>{html.escape(item)}</li>" for item in audit["missing_information"]) or "<li>暂无</li>"
     return f"""<!doctype html>
-<html lang="zh-CN">
+<html lang=\"zh-CN\">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset=\"utf-8\">
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
   <title>{html.escape(audit['name'])} 成果审计报告</title>
   <style>
-    body {{ font-family: "Segoe UI", sans-serif; margin: 0; background: #f3f5f7; color: #14202b; }}
+    body {{ font-family: 'Segoe UI', sans-serif; margin: 0; background: #f3f5f7; color: #14202b; }}
     main {{ max-width: 1080px; margin: 0 auto; padding: 28px 18px 48px; }}
     .hero, .panel, .card {{ background: #fff; border: 1px solid #d9e0e8; border-radius: 10px; padding: 18px; }}
     .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }}
@@ -964,25 +1235,23 @@ def render_html(audit: dict[str, Any], markdown: str) -> str:
 </head>
 <body>
   <main>
-    <section class="hero">
+    <section class=\"hero\">
       <p>多源实习材料成果审计</p>
       <h1>{html.escape(audit['name'])}</h1>
       <p>sources={audit['source_count']} | knowledge_modes={html.escape(', '.join(audit['knowledge_modes']) or 'none')}</p>
     </section>
-    <section class="panel">
+    <section class=\"panel\">
       <h2>缺失信息</h2>
       <ul>{missing}</ul>
       <h2>主要来源</h2>
       <ul>{source_items}</ul>
     </section>
-    <section class="grid">
+    <section class=\"grid\">
       {''.join(achievement_cards)}
     </section>
   </main>
 </body>
 </html>"""
-
-
 def write_audit_outputs(audit: dict[str, Any], out_dir: str | Path) -> dict[str, str]:
     out = ensure_dir(out_dir)
     markdown = render_markdown(audit)

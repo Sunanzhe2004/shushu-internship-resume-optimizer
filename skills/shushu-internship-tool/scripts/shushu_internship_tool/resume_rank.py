@@ -15,8 +15,8 @@ from .resume_style_bench import (
 
 
 TOKEN_RE = re.compile(r"[\u4e00-\u9fff]{2,}|[A-Za-z][A-Za-z0-9_+#.-]{1,}")
-CLAUSE_SPLIT_RE = re.compile(r"[，。！？；\n]")
-SENTENCE_SPLIT_RE = re.compile(r"[。！？；\n]")
+CLAUSE_SPLIT_RE = re.compile(r"[，。！？；;\n]")
+SENTENCE_SPLIT_RE = re.compile(r"[。！？；;\n]")
 NOISE_PREFIXES = (
     "核心职责",
     "技术栈",
@@ -38,6 +38,12 @@ NOISE_EXACT = {
     "无效数据检测体系设计（P-E-R 流水线）",
     "LLM-as-Judge 评估 Prompt 工程",
 }
+LOW_VALUE_WORKLOAD_RE = re.compile(
+    r"(?i)(?:读取|扫描|遍历|处理|分析|review|read|scan|process).{0,12}\d+\s*(?:个|份|条|文件|file|files|仓库|repo|repos)"
+)
+VALUE_SIGNAL_RE = re.compile(
+    r"(?i)(?:减少|降低|提升|优化|节省|支持|避免|拦截|过滤|定位|归因|解释|恢复|稳定|吞吐|准确率|召回率|一致率|F1|Recall|Precision|成本|效率|误判|耗时|延迟|成功率)"
+)
 
 
 def tokenize(text: str) -> set[str]:
@@ -53,18 +59,7 @@ def tokenize(text: str) -> set[str]:
 
 def extract_jd_keywords(jd_text: str) -> list[str]:
     tokens = list(dict.fromkeys(TOKEN_RE.findall(jd_text)))
-    preferred = [
-        "fastapi",
-        "asyncio",
-        "python",
-        "后端",
-        "backend",
-        "llm",
-        "prompt",
-        "评估",
-        "归因",
-        "自动化",
-    ]
+    preferred = ["fastapi", "asyncio", "python", "后端", "backend", "llm", "prompt", "评估", "归因", "自动化"]
     ordered: list[str] = []
     lowered = jd_text.lower()
     for keyword in preferred:
@@ -119,9 +114,14 @@ def is_noise_line(text: str) -> bool:
     return any(value.startswith(prefix) for prefix in NOISE_PREFIXES)
 
 
+def is_low_value_workload_text(text: str) -> bool:
+    clean = sanitize_text(text)
+    return bool(LOW_VALUE_WORKLOAD_RE.search(clean)) and not VALUE_SIGNAL_RE.search(clean)
+
+
 def clean_action(action: str, title: str) -> str:
     value = sanitize_text(action)
-    if is_noise_line(value):
+    if is_noise_line(value) or is_low_value_workload_text(value):
         return ""
     if title and title in value:
         value = value.replace(title, "", 1).strip("，。！？； ")
@@ -169,17 +169,13 @@ def extract_sentences(text: str) -> list[str]:
 def extract_action_fragments(item: dict[str, Any], limit: int = 3) -> list[str]:
     fragments: list[str] = []
     title = item.get("title", "")
-
     task = clean_action(item.get("task", ""), title)
     if task:
         fragments.append(task)
-
     for raw in normalize_list(item.get("actions")):
         for sentence in extract_sentences(raw):
             cleaned = clean_action(sentence, title)
-            if not cleaned:
-                continue
-            if cleaned not in fragments:
+            if cleaned and cleaned not in fragments:
                 fragments.append(cleaned)
             if len(fragments) >= limit:
                 return fragments
@@ -217,92 +213,230 @@ def extract_metric_summary(item: dict[str, Any]) -> str:
     if metrics:
         return best_metric(metrics)
     joined = " ".join(normalize_list(item.get("actions")))
-    candidates = re.findall(r"(F1[^，。；\n]*|Recall[^，。；\n]*|Precision[^，。；\n]*|[^，。；\n]*(?:一致率|准确率|召回率|误判率|无效 LLM 调用|%|30s)[^，。；\n]*)", joined, flags=re.I)
+    candidates = re.findall(
+        r"(F1[^，。；\n]*|Recall[^，。；\n]*|Precision[^，。；\n]*|[^，。；\n]*(?:一致率|准确率|召回率|误判率|无效 LLM 调用|%|30s)[^，。；\n]*)",
+        joined,
+        flags=re.I,
+    )
     cleaned = [sanitize_text(candidate) for candidate in candidates if sanitize_text(candidate)]
     return cleaned[0] if cleaned else ""
 
 
-def title_track(item: dict[str, Any]) -> str:
-    title = item.get("title", "")
-    if "自动评估任务完成情况优化" in title:
-        return "eval"
-    if "错误标签自动化判别" in title or "错误标签自动化归因" in title:
-        return "label"
-    if "异步评估服务工程化" in title:
+def infer_semantic_track(item: dict[str, Any]) -> str:
+    text = " ".join(
+        [
+            sanitize_text(item.get("title", "")),
+            sanitize_text(item.get("task", "")),
+            sanitize_text(item.get("outcome", "")),
+            sanitize_text(item.get("business_context", "")),
+            " ".join(normalize_list(item.get("actions"))),
+            " ".join(normalize_list(item.get("tech_stack"))),
+        ]
+    ).lower()
+    if any(keyword in text for keyword in ("service", "fastapi", "asyncio", "http", "queue", "workflow", "pipeline", "服务")):
         return "service"
+    if any(keyword in text for keyword in ("label", "归因", "标签", "错误", "失败", "case")):
+        return "analysis"
+    if any(keyword in text for keyword in ("prompt", "llm", "vlm", "judge", "评估", "eval", "判定", "规则")):
+        return "evaluation"
     return "general"
 
 
+def title_track(item: dict[str, Any]) -> str:
+    return infer_semantic_track(item)
+
+
 def track_rank(item: dict[str, Any]) -> int:
-    order = {
-        "eval": 0,
-        "label": 1,
-        "service": 2,
-        "general": 3,
-    }
+    order = {"evaluation": 0, "analysis": 1, "service": 2, "general": 3}
     return order.get(title_track(item), 9)
+
+
+def related_item_tokens(item: dict[str, Any]) -> set[str]:
+    return tokenize(
+        " ".join(
+            [
+                item.get("title", ""),
+                item.get("one_line_scope", ""),
+                item.get("task", ""),
+                item.get("business_context", ""),
+                item.get("background", ""),
+                " ".join(normalize_list(item.get("tech_stack"))),
+                " ".join(normalize_list(item.get("matched_keywords"))),
+                " ".join(entry.get("source_ref", "") for entry in item.get("evidence", [])),
+            ]
+        )
+    )
+
+
+def merge_reason_summary(left: dict[str, Any], right: dict[str, Any], overlap: set[str]) -> list[str]:
+    reasons: list[str] = []
+    if title_track(left) == title_track(right):
+        reasons.append("同一能力主线")
+    shared_tech = list(dict.fromkeys(set(normalize_list(left.get("tech_stack"))) & set(normalize_list(right.get("tech_stack")))))
+    if shared_tech:
+        reasons.append(f"共享技术栈：{', '.join(shared_tech[:3])}")
+    left_context = choose_business_context(left)
+    right_context = choose_business_context(right)
+    if left_context and right_context and (left_context in right_context or right_context in left_context):
+        reasons.append("业务上下文高度重合")
+    shared_sources = list(
+        dict.fromkeys(
+            {
+                entry.get("source_ref", "")
+                for entry in left.get("evidence", [])
+                if entry.get("source_ref")
+            }
+            & {
+                entry.get("source_ref", "")
+                for entry in right.get("evidence", [])
+                if entry.get("source_ref")
+            }
+        )
+    )
+    if shared_sources:
+        reasons.append(f"证据来源重合：{', '.join(shared_sources[:2])}")
+    if overlap:
+        reasons.append(f"关键词重合：{', '.join(sorted(overlap)[:5])}")
+    return reasons[:4]
+
+
+def relation_score(left: dict[str, Any], right: dict[str, Any]) -> tuple[int, list[str]]:
+    overlap = related_item_tokens(left) & related_item_tokens(right)
+    score = len(overlap)
+    if title_track(left) == title_track(right):
+        score += 3
+    if set(normalize_list(left.get("tech_stack"))) & set(normalize_list(right.get("tech_stack"))):
+        score += 2
+    left_context = choose_business_context(left)
+    right_context = choose_business_context(right)
+    if left_context and right_context and (left_context in right_context or right_context in left_context):
+        score += 2
+    left_sources = {entry.get("source_ref", "") for entry in left.get("evidence", []) if entry.get("source_ref")}
+    right_sources = {entry.get("source_ref", "") for entry in right.get("evidence", []) if entry.get("source_ref")}
+    if left_sources & right_sources:
+        score += 2
+    return score, merge_reason_summary(left, right, overlap)
 
 
 def concise_metric(metric: str) -> str:
     clean = sanitize_text(metric)
     if not clean:
         return ""
-    if "result_code" in clean or "匹配已知错误码" in clean or "错误码" in clean or "结果码" in clean:
-        return "可前置识别并过滤异常状态样本"
-    if "后续可以直接接入 eval 分析链路" in clean:
-        return "已形成可接入后续分析链路的归因框架"
-    if "asyncio.Semaphore" in clean:
-        return "补齐并发控制与异步服务运行能力"
-    clean = clean.replace("当前结果为", "").replace("结果达到", "").strip("，。； ")
     if len(clean) > 34:
         clean = compress_phrase(clean, 34)
     return clean
 
 
+def build_merged_bullet(left: dict[str, Any], right: dict[str, Any], variant: int = 0) -> str:
+    context = choose_business_context(left)
+    other_context = choose_business_context(right)
+    if other_context and len(other_context) > len(context):
+        context = other_context
+    action_a = choose_focus_fragment(left)
+    action_b = choose_focus_fragment(right)
+    metric_a = concise_metric(extract_metric_summary(left))
+    metric_b = concise_metric(extract_metric_summary(right))
+    metrics = [metric for metric in [metric_a, metric_b] if metric]
+    metric_text = "；".join(list(dict.fromkeys(metrics))[:2])
+    shared_tech = "/".join(
+        list(dict.fromkeys([*normalize_list(left.get("tech_stack")), *normalize_list(right.get("tech_stack"))]))[:3]
+    )
+    if variant == 0:
+        sentence = f"围绕{context}，串联{action_a}与{action_b}"
+        if shared_tech:
+            sentence += f"，覆盖{shared_tech}等关键实现"
+    else:
+        sentence = f"将两块强关联工作合并整理：一方面{action_a}，另一方面{action_b}"
+        if context:
+            sentence += f"，共同服务于{context}"
+    if metric_text:
+        sentence += f"，结果可结合{metric_text}一起表达"
+    return sentence
+
+
+def build_related_merge_candidates(ranked: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    for index, left in enumerate(ranked):
+        for other_index in range(index + 1, len(ranked)):
+            right = ranked[other_index]
+            score, reasons = relation_score(left, right)
+            if score < 8:
+                continue
+            candidates.append(
+                {
+                    "achievement_titles": [left.get("title", ""), right.get("title", "")],
+                    "merge_strength": score,
+                    "merge_reasons": reasons,
+                    "merged_resume_bullets": [
+                        build_merged_bullet(left, right, variant=0),
+                        build_merged_bullet(left, right, variant=1),
+                    ],
+                }
+            )
+    return sorted(candidates, key=lambda item: (-item["merge_strength"], item["achievement_titles"]))
+
+
+def causal_stage(bullet: str) -> int:
+    text = sanitize_text(bullet)
+    lowered = text.lower()
+    if any(keyword in text for keyword in ("结果为", "核心结果", "最终", "从而", "因此", "进而")):
+        return 2
+    if any(keyword in text for keyword in ("减少", "降低", "提升", "节省", "支撑", "避免", "稳定", "提效", "优化效果")):
+        return 2
+    if any(keyword in lowered for keyword in ("f1", "recall", "precision")) or "%" in text:
+        return 2
+    if any(keyword in text for keyword in ("优化", "迭代", "完善", "补充", "改进", "归因")):
+        return 1
+    if any(keyword in text for keyword in ("搭建", "设计", "构建", "实现", "梳理", "沉淀", "接入", "过滤", "识别", "服务化")):
+        return 0
+    return 1
+
+
+def reorder_bullets_by_causality(bullets: list[str]) -> list[str]:
+    decorated = [(index, bullet, causal_stage(bullet)) for index, bullet in enumerate(bullets) if str(bullet).strip()]
+    if len(decorated) < 2:
+        return [bullet for _, bullet, _ in decorated]
+    if len({stage for _, _, stage in decorated}) == 1:
+        return [bullet for _, bullet, _ in decorated]
+    ordered = sorted(decorated, key=lambda item: (item[2], item[0]))
+    return [bullet for _, bullet, _ in ordered]
+
+
 def build_track_bullet(item: dict[str, Any], variant: int = 0) -> str:
     track = title_track(item)
+    title = sanitize_text(item.get("title", "项目"))
+    action = choose_focus_fragment(item)
     metric = concise_metric(extract_metric_summary(item))
-
-    if track == "eval":
-        if variant == 0:
-            base = (
-                "围绕 GUI Agent 轨迹自动评估，设计 P-E-R 无效数据过滤与判定链路，"
-                "通过前置规则拦截文件缺失、结果码异常等问题，减少无效样本对任务完成判断的干扰"
-            )
-        else:
-            base = (
-                "优化手机 GUI Agent 任务完成情况自动评估流程，"
-                "将无效数据前置过滤、LLM 判定与后置校验拆成分层链路，提升评估稳定性"
-            )
-        return base + (f"，已验证 {metric}" if metric else "")
-
-    if track == "label":
-        if variant == 0:
-            base = (
-                "搭建失败 case 一级、二级标签归因 workflow，"
-                "将任务失败原因结构化，便于后续接入 eval 分析链路并定位高频问题"
-            )
-        else:
-            base = (
-                "推进失败样本自动化归因方案设计，"
-                "沉淀一级、二级标签体系，为后续策略迭代和问题分析提供统一入口"
-            )
-        return base + (f"，当前阶段 {metric}" if metric else "")
+    business = choose_business_context(item)
+    value = compress_phrase(sanitize_text(item.get("business_value", "")), 24)
+    tech = "/".join(normalize_list(item.get("tech_stack"))[:3]) or "Python"
 
     if track == "service":
-        if variant == 0:
-            base = (
-                "将 AutoEval 工具链服务化，基于 FastAPI + asyncio 搭建异步评估服务，"
-                "支持 HTTP 提交、文件监听触发和任务持久化，提升采集端与评估端解耦能力"
-            )
-        else:
-            base = (
-                "完成自动评估 workflow 的服务化落地，"
-                "补充并发控制、任务恢复与文件防抖机制，支撑跨机器协作运行"
-            )
-        return base + (f"，其中 {metric}" if metric else "")
+        base = (
+            f"围绕{business or title}搭建服务化能力，基于{tech}完成{action}"
+            if variant == 0
+            else f"将{title}落到可复用服务形态，围绕{action}补齐工程化运行能力"
+        )
+    elif track == "analysis":
+        base = (
+            f"围绕{business or title}推进{title}，通过{action}支撑失败样本归因与问题定位"
+            if variant == 0
+            else f"围绕{title}完善结构化分析链路，重点完成{action}"
+        )
+    elif track == "evaluation":
+        base = (
+            f"围绕{business or title}优化{title}，重点推进{action}"
+            if variant == 0
+            else f"面向{business or title}搭建评估与判定能力，围绕{action}持续迭代"
+        )
+    else:
+        return ""
 
-    return ""
+    if value and value not in base and value != action:
+        base += f"，支撑{value}"
+    if metric:
+        base += f"，结果为{metric}"
+    return base
 
 
 def build_bullet(item: dict[str, Any], target_role: str, jd_text: str, variant: int = 0) -> str:
@@ -312,35 +446,29 @@ def build_bullet(item: dict[str, Any], target_role: str, jd_text: str, variant: 
         return track_bullet
 
     benchmark = get_style_benchmark(target_role or item.get("target_role", ""))
-    title = item.get("title", "项目")
+    title = sanitize_text(item.get("title", "项目")) or "项目"
     action = choose_focus_fragment(item)
     business = choose_business_context(item)
     tech_stack = "/".join(normalize_list(item.get("tech_stack"))[:3]) or "Python/工程工具链"
-    metric = extract_metric_summary(item)
+    metric = concise_metric(extract_metric_summary(item))
     business_value = compress_phrase(sanitize_text(item.get("business_value", "")), 26)
     short_tech = compress_phrase(tech_stack, 20)
     lead = choose_lead_verb(item, variant=variant)
 
     if benchmark["track"] == "ai":
         if variant == 0:
-            if "异步评估服务" in title:
-                return f"基于 FastAPI + asyncio 搭建异步评估服务，支撑采集端与评估端解耦" + (f"，并通过 {metric} 验证阶段性效果" if metric else "")
-            if "自动评估任务完成情况优化" in title:
-                return f"设计 P-E-R 三阶段无效数据检测与评估链路，降低无效数据对任务完成判断的干扰" + (f"，当前结果为 {metric}" if metric else "")
-            if "错误标签自动化判别" in title:
-                return f"设计失败 case 的一级、二级标签归因 workflow，支撑高频问题定位与后续策略迭代" + (f"，阶段性结果为 {metric}" if metric else "")
-            base = f"{lead}{title}，负责{action}"
+            base = f"{lead}{title}，重点完成{action}"
             if business_value and business_value != action:
                 base += f"，支撑{business_value}"
-            return base + (f"，结果达到{metric}" if metric else "")
-        return f"在{business}场景中{lead}{title}，结合{short_tech}完成{action}" + (f"，核心结果为{metric}" if metric else "")
+            return base + (f"，结果为{metric}" if metric else "")
+        return f"在{business or title}场景中{lead}{title}，结合{short_tech}推进{action}" + (f"，核心结果为{metric}" if metric else "")
 
     if variant == 0:
         base = f"{lead}{title}，基于{compress_phrase(tech_stack, 18)}推进{action}"
         if business_value and business_value != action:
             base += f"，支撑{business_value}"
-        return base + (f"，结果达到{metric}" if metric else "")
-    return f"围绕{business}落地{title}，通过{action}支撑业务需求" + (f"，并取得{metric}" if metric else "")
+        return base + (f"，结果为{metric}" if metric else "")
+    return f"围绕{business or title}落地{title}，通过{action}支撑业务需求" + (f"，并取得{metric}" if metric else "")
 
 
 def derive_recommendation_reason(item: dict[str, Any]) -> str:
@@ -398,227 +526,217 @@ def derive_next_steps(item: dict[str, Any]) -> list[str]:
 
 def score_achievement(item: dict[str, Any], jd_text: str, target_role: str) -> dict[str, Any]:
     jd_tokens = set(extract_jd_keywords(jd_text))
-    item_tokens = tokenize(
-        " ".join(
-            [
-                item.get("title", ""),
-                item.get("background", ""),
-                item.get("task", ""),
-                item.get("outcome", ""),
-                item.get("business_context", ""),
-                " ".join(normalize_list(item.get("tech_stack"))),
-                " ".join(normalize_list(item.get("matched_keywords"))),
-            ]
-        )
+    text = " ".join(
+        [
+            item.get("title", ""),
+            item.get("task", ""),
+            item.get("outcome", ""),
+            item.get("business_context", ""),
+            " ".join(normalize_list(item.get("actions"))),
+            " ".join(normalize_list(item.get("matched_keywords"))),
+        ]
     )
-    matches = sorted(jd_tokens & item_tokens)
+    item_tokens = tokenize(text)
+    matches = [token for token in extract_jd_keywords(jd_text) if token.lower() in item_tokens]
+
     keyword_points = min(36, len(matches) * 4)
-    evidence_points = min(20, len(item.get("evidence", [])) * 3)
-    metric_points = 16 if item.get("metrics") else 4
-    readiness_points = 12 if item.get("resume_ready") else 2
-    business_points = 10 if item.get("business_context") else 2
+    evidence_points = min(20, len(item.get("evidence", [])) * 4)
+    metric_points = 16 if normalize_list(item.get("metrics")) else 0
+    readiness_points = 12 if item.get("resume_ready") else 4
+    business_points = 8 if item.get("business_context") else 0
 
     primary_bullet = build_bullet(item, target_role, jd_text, variant=0)
     backup_bullet = build_bullet(item, target_role, jd_text, variant=1)
-    benchmark = get_style_benchmark(target_role or jd_text)
+    benchmark = get_style_benchmark(target_role or item.get("target_role", ""))
     phrasing_risks = evaluate_risk_phrases(primary_bullet, benchmark)
-    risk_notes = list(dict.fromkeys([*normalize_list(item.get("risk_flags")), *phrasing_risks]))
-    if item.get("user_check_flags"):
-        risk_notes.extend(flag for flag in item["user_check_flags"] if flag not in risk_notes)
-    risk_notes = list(dict.fromkeys(risk_notes))
-    risk_penalty = min(24, len(risk_notes) * 4)
+    risk_notes = list(dict.fromkeys([*normalize_list(item.get("risk_flags")), *normalize_list(item.get("user_check_flags")), *phrasing_risks]))
+    risk_penalty = min(20, len(risk_notes) * 3)
+
     score = max(
         0,
-        min(
-            100,
-            int(
-                math.ceil(
-                    keyword_points + evidence_points + metric_points + readiness_points + business_points - risk_penalty
-                )
-            ),
-        ),
+        keyword_points + evidence_points + metric_points + readiness_points + business_points - risk_penalty,
     )
-    return {
-        **item,
-        "target_role": target_role,
-        "score": score,
-        "keywords_hit": matches[:10],
-        "strength": "strong" if score >= 75 else "medium" if score >= 55 else "weak",
-        "risk_notes": risk_notes,
-        "resume_bullets": [primary_bullet, backup_bullet],
-        "followup_questions": [
-            "这个成果的业务目标是什么？",
-            "你具体做了哪一部分，如何验证效果？",
-            "如果没有完整指标，你会怎么证明这件事有价值？",
-        ],
-        "recommendation_reason": derive_recommendation_reason({**item, "keywords_hit": matches}),
-        "next_steps": derive_next_steps(item),
-        "score_breakdown": {
-            "jd_match": keyword_points,
-            "evidence_strength": evidence_points,
-            "metrics": metric_points,
-            "resume_readiness": readiness_points,
-            "business_context": business_points,
-            "risk_penalty": -risk_penalty,
-        },
-    }
+
+    ranked = dict(item)
+    ranked.update(
+        {
+            "target_role": target_role,
+            "score": score,
+            "keywords_hit": matches[:10],
+            "risk_notes": risk_notes,
+            "resume_bullets": [primary_bullet, backup_bullet],
+            "best_metric": extract_metric_summary(item),
+            "recommendation_reason": derive_recommendation_reason({**item, "keywords_hit": matches}),
+            "next_steps": derive_next_steps({**item, "matched_keywords": matches}),
+            "score_breakdown": {
+                "jd_match": keyword_points,
+                "evidence": evidence_points,
+                "metric": metric_points,
+                "readiness": readiness_points,
+                "business": business_points,
+                "risk_penalty": risk_penalty,
+            },
+        }
+    )
+    return ranked
 
 
-def rank_achievements(jd_text: str, achievements: list[dict[str, Any]], target_role: str = "") -> list[dict[str, Any]]:
-    scored = [score_achievement(item, jd_text, target_role=target_role) for item in achievements]
+def rank_achievements(jd_text: str, achievements: list[dict[str, Any]], target_role: str) -> list[dict[str, Any]]:
+    ranked = [score_achievement(item, jd_text, target_role) for item in achievements]
     return sorted(
-        scored,
+        ranked,
         key=lambda item: (-item["score"], track_rank(item), len(item["risk_notes"]), item["title"]),
     )
 
 
-def render_markdown(ranked: list[dict[str, Any]], jd_path: str | None = None, target_role: str = "") -> str:
-    rows = []
-    for index, item in enumerate(ranked, start=1):
-        rows.append(
-            [
-                index,
-                item["title"],
-                item["score"],
-                item["strength"],
-                ", ".join(item["keywords_hit"][:5]) or "待补充",
-                ", ".join(item.get("metrics", [])[:3]) or "待补量化",
-                "; ".join(item["risk_notes"]) or "低",
-            ]
-        )
-
+def render_markdown(ranked: list[dict[str, Any]], target_role: str) -> str:
     top = ranked[0] if ranked else None
     style_issues = detect_generated_style_issues([top["resume_bullets"][0], top["resume_bullets"][1]]) if top else []
-    parts = [
-        "# 简历成果排序",
+    lines = [
+        "# 简历排序报告",
         "",
-        f"- JD source: `{jd_path}`" if jd_path else "- JD source: inline",
-        f"- target_role: `{target_role or 'auto'}`",
+        f"- target role: `{target_role or '未指定'}`",
+        f"- achievement count: `{len(ranked)}`",
         f"- primary recommendation: `{top['title']}` score={top['score']}" if top else "- primary recommendation: none",
         "",
-        markdown_table(["Rank", "Achievement", "Score", "Strength", "Keywords", "Metrics", "Risks"], rows),
     ]
     if top:
-        parts.extend(
+        lines.extend(
             [
-                "",
                 "## 推荐写法",
                 "",
                 f"- {top['resume_bullets'][0]}",
                 f"- {top['resume_bullets'][1]}",
                 "",
-                "## 为什么排前",
-                "",
-                f"- {top['recommendation_reason']}",
             ]
         )
-        if style_issues:
-            parts.extend(
-                [
-                    "",
-                    "## 生成表述提醒",
-                    "",
-                    "\n".join(f"- {issue}" for issue in style_issues),
-                ]
-            )
-        parts.extend(
-            [
-                "",
-                "## 下一步补强",
-                "",
-                "\n".join(f"- {step}" for step in top["next_steps"]),
-            ]
-        )
-    return "\n".join(parts)
+    if style_issues:
+        lines.extend(["## 生成表述提醒", "", *[f"- {issue}" for issue in style_issues], ""])
+    if ranked:
+        rows = [
+            [item["title"], item["score"], ", ".join(item["keywords_hit"][:5]) or "待补充", "；".join(item["risk_notes"][:3]) or "低"]
+            for item in ranked[:8]
+        ]
+        lines.extend(["## 排序概览", "", markdown_table(["title", "score", "keywords", "risk"], rows), ""])
+    return "\n".join(lines).strip() + "\n"
 
 
-def render_resume_project_summary(ranked: list[dict[str, Any]], target_role: str = "") -> str:
-    if not ranked:
-        return "# 简历项目精简版\n\n暂无可用项目内容。\n"
-
-    top = sorted(ranked[:4], key=track_rank)
-    primary = top[0]
-    role_label = target_role or primary.get("target_role") or "AI / Agent 相关岗位"
-    context = choose_business_context(primary)
+def render_resume_project_summary(
+    ranked: list[dict[str, Any]],
+    target_role: str,
+    use_merged_bullet: bool = False,
+) -> str:
+    merge_candidates = build_related_merge_candidates(ranked)
+    role_label = target_role or (ranked[0].get("target_role", "") if ranked else "未指定")
+    top = ranked[:4]
     bullets = [item["resume_bullets"][0] for item in top if item.get("resume_bullets")]
+    if use_merged_bullet and merge_candidates:
+        bullets = [merge_candidates[0]["merged_resume_bullets"][1], *bullets]
+    bullets = reorder_bullets_by_causality(bullets)
     style_issues = detect_generated_style_issues(bullets)
 
-    parts = [
+    lines = [
         "# 简历项目精简版",
         "",
-        "## 项目定位",
-        "",
         f"- 面向 `{role_label}` 的简历版项目描述，建议保留 1 句项目定位 + 2 到 4 条结果导向 bullet。",
-        f"- 项目背景可压缩为：{context}",
+        "- 可直接写进简历，也可以作为后续 refine 的输入底稿。",
         "",
-        "## 可直接写进简历",
+        "## 建议写法",
         "",
         "\n".join(f"- {bullet}" for bullet in bullets[:4]),
+        "",
     ]
-    if style_issues:
-        parts.extend(
+    if merge_candidates:
+        top_merge = merge_candidates[0]
+        lines.extend(
             [
+                "## 强关联项目合并建议",
                 "",
-                "## 生成表述提醒",
+                f"- 推荐组合：{' + '.join(top_merge['achievement_titles'])}",
+                f"- 原因：{'；'.join(top_merge['merge_reasons'])}",
+                f"- 合并版 bullet：{top_merge['merged_resume_bullets'][0]}",
+                "- 默认仍保留拆开写；如果你更想突出一条完整主线，可以改用这条合并版 bullet。",
                 "",
-                "\n".join(f"- {issue}" for issue in style_issues),
             ]
         )
-    parts.extend(
+    if style_issues:
+        lines.extend(["## 生成表述提醒", "", *[f"- {issue}" for issue in style_issues], ""])
+    lines.extend(
         [
-            "",
-            "## 使用建议",
+            "## 使用提醒",
             "",
             "- 长版 `.md` 更适合自己复盘、面试准备和补证据；简历里建议只保留 1 句项目定位 + 2 到 4 条结果导向 bullet。",
-            "- 如果某条里出现 AI 总结味重、边界不清或数字未确认，先和本人经历核对，再决定是否写入正式简历。",
+            "",
         ]
     )
-    return "\n".join(parts) + "\n"
+    return "\n".join(lines).strip() + "\n"
 
 
 def write_ranking_outputs(
     ranked: list[dict[str, Any]],
     out_dir: str | Path,
-    jd_path: str | None = None,
-    target_role: str = "",
+    target_role: str,
+    use_merged_bullet: bool = False,
 ) -> dict[str, str]:
     out = ensure_dir(out_dir)
-    return {
-        "resume_rank_json": str(write_json(out / "resume_rank.json", {"achievements": ranked, "target_role": target_role})),
-        "resume_rank_md": str(write_text(out / "resume_rank.md", render_markdown(ranked, jd_path=jd_path, target_role=target_role))),
+    merge_candidates = build_related_merge_candidates(ranked)
+    payload = {
+        "target_role": target_role,
+        "achievement_count": len(ranked),
+        "merge_related_bullets_enabled": use_merged_bullet,
+        "related_merge_candidates": merge_candidates,
+        "ranked_achievements": ranked,
+    }
+    paths = {
+        "resume_rank_json": str(write_json(out / "resume_rank.json", payload)),
+        "resume_rank_md": str(write_text(out / "resume_rank.md", render_markdown(ranked, target_role))),
         "resume_project_summary_md": str(
-            write_text(out / "resume_project_summary.md", render_resume_project_summary(ranked, target_role=target_role))
+            write_text(
+                out / "resume_project_summary.md",
+                render_resume_project_summary(ranked, target_role, use_merged_bullet=use_merged_bullet),
+            )
         ),
     }
+    return paths
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Rank internship achievements for resume writing against a target JD.")
-    parser.add_argument("--jd", required=True, help="Path to a text file containing the target job description.")
-    parser.add_argument("--achievements", required=True, help="Path to achievement JSON or achievement audit JSON.")
-    parser.add_argument("--target-role", default="", help="Target role or lane, used for style calibration.")
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Rank audited achievements for resume writing.")
+    parser.add_argument("--jd", required=True, help="Path to target JD text file.")
+    parser.add_argument("--achievements", required=True, help="Path to achievement_audit json.")
+    parser.add_argument("--target-role", default="", help="Target role label used for style selection.")
     parser.add_argument("--out", required=True, help="Output directory.")
-    args = parser.parse_args(argv)
+    parser.add_argument(
+        "--merge-related-bullets",
+        action="store_true",
+        help="When strong-related project bullets are detected, include the merged version directly in the resume project summary.",
+    )
+    args = parser.parse_args()
 
-    jd_path = Path(args.jd)
-    jd_text = jd_path.read_text(encoding="utf-8", errors="replace")
-    achievements = parse_achievements(load_json(args.achievements))
+    jd_text = Path(args.jd).read_text(encoding="utf-8")
+    payload = load_json(args.achievements)
+    achievements = parse_achievements(payload)
     ranked = rank_achievements(jd_text, achievements, target_role=args.target_role)
-    paths = write_ranking_outputs(ranked, args.out, jd_path=str(jd_path), target_role=args.target_role)
-    for label, path in paths.items():
-        print(f"{label}: {path}")
-    return 0
+    paths = write_ranking_outputs(
+        ranked,
+        args.out,
+        target_role=args.target_role,
+        use_merged_bullet=args.merge_related_bullets,
+    )
+    for key, value in paths.items():
+        print(f"{key}: {value}")
 
 
 __all__ = [
     "build_bullet",
+    "build_related_merge_candidates",
     "parse_achievements",
     "rank_achievements",
+    "render_markdown",
     "render_resume_project_summary",
-    "score_achievement",
     "write_ranking_outputs",
 ]
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

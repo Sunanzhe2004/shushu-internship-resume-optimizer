@@ -28,3 +28,6 @@ tests/
 .DS_Store
 .idea/
 .vscode/
+
+# Local example materials that should stay out of git
+examples/phonegpt_input/

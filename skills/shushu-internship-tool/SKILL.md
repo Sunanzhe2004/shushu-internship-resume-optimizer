@@ -3,107 +3,128 @@ name: shushu-internship-tool
 description: "Use when an AI assistant helps users turn ongoing internship work into resume-ready and interview-ready material from code repos, project summaries, and business documents."
 ---
 
-# Shushu 实习材料整理工作流
+# Shushu Internship Tool
+Default output is Chinese, while preserving English technical terms, commands, and repository names.
 
-默认输出中文，保留英文技术术语、命令和仓库名。
+## Goal
 
-## 目标
+Turn messy internship materials into:
+- resume-ready achievements
+- JD-oriented resume bullets
+- evidence-backed project summaries
+- business-context explanations
+- interview-ready STAR and Q&A material
 
-把用户当前实习里的零散材料整理成：
+## Core Principle
 
-- 可写进简历的成果项
-- 面向 JD 的简历 bullet 改写
-- 可追溯证据
-- 业务背景说明
-- 面试讲述包
+Prefer `skill`-level reusable methodology over user-specific hard scripts.
 
-## 输入信息
+This means:
+- use model understanding first for project grouping, contribution extraction, value judgment, and title generation
+- use scripts for stable work only: file loading, normalization, schema validation, deduplication, ranking, formatting, and output writing
+- treat fixture materials as regression checks, not as the source of domain rules
+- avoid growing keyword-to-title maps as the main extraction strategy
+- if a rule is added, it should express a broad pattern such as structure, causality, evidence quality, or value filtering
 
-优先收集：
+## Preferred Workflow
 
-- 目标 JD
-- 目标岗位方向
-- 当前实习做了什么
-- 可以提供哪些材料：代码库 / 周报总结 / 业务文档 / PR / 复盘
-- 是否有量化指标
-- 是否受保密限制
+### 1. Gather Inputs
 
-## Workflow
+Prefer collecting:
+- target JD
+- target role direction
+- current internship scope
+- available materials: `code_repo` / `project_summary` / `business_docs` / PR / notes / retrospectives
+- known metrics or business outcomes
+- confidentiality constraints
 
-### 1. 多源材料整理
+### 2. Normalize Into `sources.json`
 
-把材料整理成 `sources.json`，支持：
-
+Supported source types:
 - `code_repo`
 - `project_summary`
 - `business_docs`
 
-### 2. 成果审计
+When possible, prefer adding model-structured extraction to textual sources via:
+- `structured_extract_path`
+- `structured_extract`
 
-运行：
+This is preferred over forcing long free-form notes through brittle fallback parsing.
+
+### 3. Achievement Audit
+
+Run:
 
 ```bash
 python -m shushu_internship_tool.achievement_audit --sources sources.json --out reports/audit
 ```
 
-关注输出：
+Focus on:
+- whether project blocks are split correctly
+- whether each achievement has real business context
+- whether value comes from outcomes rather than workload counts
+- whether user-check flags expose weak claims, AI-ish wording, or missing evidence
 
-- `achievement_audit.json`
-- `overview.md`
-- `overview.html`
+### 4. Resume Ranking
 
-重点确认：
-
-- 成果项是否合并合理
-- 是否提到了业务背景
-- 是否缺少量化和证据
-
-### 3. 简历排序与写法
-
-运行：
+Run:
 
 ```bash
-python -m shushu_internship_tool.resume_rank --jd jd.txt --achievements reports/audit/achievement_audit.json --target-role 后端开发 --out reports/rank
+python -m shushu_internship_tool.resume_rank --jd jd.txt --achievements reports/audit/achievement_audit.json --target-role backend --out reports/rank
 ```
 
-重点确认：
+Focus on:
+- which achievements are worth keeping for the target role
+- which bullets should stay separate vs. merge
+- whether bullet ordering follows causal flow: setup -> mechanism -> result
 
-- 哪些成果适合写进简历
-- 哪些成果证据不足
-- 哪些写法更适合当前岗位方向
+### 5. Interview Pack
 
-### 4. 业务文档知识层
-
-如果用户有业务介绍文档，运行：
+Run:
 
 ```bash
-python -m shushu_internship_tool.doc_knowledge --docs business.md --mode basic_rag --query "这个流程为什么要做异常补偿" --out reports/knowledge
+python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role backend --out reports/interview
 ```
 
-模式选择：
+Focus on:
+- whether the one-minute intro sounds spoken rather than templated
+- whether STAR is traceable back to evidence
+- whether business follow-up questions can be answered cleanly
 
-- `direct`：文档很少
-- `basic_rag`：文档适中，默认推荐
-- `knowledge_base`：文档很多，想长期沉淀
+## Model-First Extraction Guidance
 
-### 5. 面试包
+For semantic tasks, prefer model output in structured form.
 
-运行：
+Recommended model responsibilities:
+- split raw materials into projects
+- decide whether two modules belong to one project
+- extract `background / task / actions / outcome / business_value`
+- identify whether a bullet is worth keeping
+- suggest merge candidates
+- rewrite titles into concise, resume-usable wording
 
-```bash
-python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role 后端开发 --out reports/interview
-```
+Recommended script responsibilities:
+- accept structured extraction
+- normalize fields into downstream schema
+- attach evidence and warnings
+- rank and format outputs
+- provide fallback parsing only when structured extraction is absent
 
-重点确认：
+See:
+- [model-first-extraction.md](./references/model-first-extraction.md)
 
-- STAR 是否能讲顺
-- 1 分钟介绍是否自然
-- 业务追问是否能落回证据
-- 指标口径是否稳妥
+## Anti-Patterns
 
-## 输出风格
+Avoid these unless there is no better option:
+- adding project-specific keyword tables derived from one user's materials
+- treating one fixture file as the canonical project structure
+- using file counts, reading volume, or review volume as achievements without value linkage
+- collapsing business background and achievements into a single bullet
+- using fallback parsing output as if it were model-quality understanding
 
-- 优先产出可直接投递、可继续手改的内容
-- 没有稳定指标时，不编造数字
-- 对不同岗位方向使用不同表达风格
-- 少写空泛 buzzword，多写职责、动作、结果、证据和业务价值
+## Output Style
+
+- optimize for reusable, editable outputs rather than flashy one-shot writing
+- never fabricate metrics
+- prefer evidence, action, outcome, and business value over buzzwords
+- keep uncertainty explicit when evidence is incomplete
