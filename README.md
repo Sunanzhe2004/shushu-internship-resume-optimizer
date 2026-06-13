@@ -10,26 +10,30 @@ Shushu 会先审计成果与证据，再按目标 JD 排序，最后生成简历
 
 > ⚠️ 使用前请先脱敏：不要提交公司内部文档、真实用户数据、密钥、访问凭证，或任何不能公开传播的实习材料。
 
-## ????
-
-??????????????? `model-first, script-second`?
-
-- `achievement_audit` ?????? `sources.json` ?? `structured_extract_path` ? `structured_extract`
-- ???????????????????`business_docs` ??????????????????????????????
-- `resume_rank` ???????????????????? `task / actions / metrics / business_value` ????????
-- `interview_pack` ???????? `resume_rank.json` ?? `ranked_achievements`???? handoff ???
-1. ?????? `project_summary.md` ????????
-2. ???????????????? `structured_extract.json`?
-3. ? `sources.json` ??????????? `structured_extract_path` ????
-4. ? `business_docs` ???????????????????????????
-
 ## 快速入口
 
 - [先跑一遍 Demo](#3-分钟试跑)
+- [先看最近更新](#最近更新)
 - [先看输出示例](#输出长什么样)
 - [接入自己的材料](#接入自己的材料)
 - [命名说明](#命名说明)
 - [先看安全提醒](#安全提醒)
+
+## 最近更新
+
+这一轮更新把主流程进一步收敛到 `model-first, script-second`：
+
+- `achievement_audit` 优先读取 `sources.json` 里的 `structured_extract_path` 或 `structured_extract`
+- 如果同一次运行已经提供结构化抽取结果，`business_docs` 默认主要补业务上下文，不再单独产生成果候选污染主线
+- `resume_rank` 不再依赖样例标题映射，更依赖 `task`、`actions`、`metrics`、`business_value` 等结构字段
+- `interview_pack` 现在可以直接读取 `resume_rank.json` 里的 `ranked_achievements`，端到端 handoff 更稳定
+
+更推荐的使用顺序是：
+
+1. 先准备干净的 `project_summary.md` 或等价原始项目材料。
+2. 如果材料很长、语义很密，先补一份 `structured_extract.json`。
+3. 在 `sources.json` 里通过 `structured_extract_path` 接入这份结构化结果。
+4. 让 `business_docs` 主要承担业务背景和流程上下文补充，而不是主导成果抽取。
 
 ## 它解决什么问题
 
@@ -182,33 +186,32 @@ python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt -
 python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role llm-application-intern --out reports/interview
 ```
 
-???? `sources.json` ?????
-
-```json
-{
-  "sources": [
-    {
-      "source_type": "project_summary",
-      "path_or_text": "your_materials/project_summary.md",
-      "title": "GUI Agent intern summary",
-      "structured_extract_path": "your_materials/structured_extract.json"
-    },
-    {
-      "source_type": "business_docs",
-      "path_or_text": "your_materials/business_overview.md",
-      "title": "business overview",
-      "knowledge_mode": "basic_rag"
-    }
-  ]
-}
-```
-
 最小输入结构可以参考 [examples/minimal_input](./examples/minimal_input/)：
 
 - `sources.json`：输入索引，串起 repo、总结和业务文档
 - `project_summary.md`：长一点也没关系，适合先交给工具做拆解
 - `business_overview.md`：帮助补足业务背景、上下游关系和问题场景
 - `target_jd.txt`：目标岗位 JD，用来做成果排序和表达校准
+
+如果你想让材料先走结构化抽取，`sources.json` 可以这样写：
+
+```json
+{
+  "code_repo": [
+    { "path": "./repo", "label": "main-repo" }
+  ],
+  "project_summary": [
+    {
+      "path": "./project_summary.md",
+      "label": "internship-summary",
+      "structured_extract_path": "./structured_extract.json"
+    }
+  ],
+  "business_docs": [
+    { "path": "./business_overview.md", "label": "business-context" }
+  ]
+}
+```
 
 如果你还想让工具辅助理解业务文档，可以额外运行：
 
