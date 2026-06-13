@@ -4,6 +4,8 @@
 
 Shushu audits achievements and evidence first, ranks them against a target JD, and then generates resume bullets, project summaries, STAR drafts, interview Q&A, and risk checklists.
 
+Last updated: `2026-06-13`
+
 [简体中文](./README.md) · [English](./README.en.md) · [Contributing](./CONTRIBUTING.md) · [Release Notes](./RELEASE_NOTES.md)
 
 ![workflow overview](./assets/workflow-overview.png)
@@ -13,7 +15,6 @@ Shushu audits achievements and evidence first, ranks them against a target JD, a
 ## Quick Links
 
 - [Run The Demo First](#3-minute-demo)
-- [See Sample Outputs](#what-the-output-looks-like)
 - [See Recent Updates](#recent-updates)
 - [Use Your Own Materials](#use-your-own-materials)
 - [Naming Notes](#naming-notes)
@@ -126,40 +127,6 @@ Look at these first after the run:
 - `demo_reports/rank/resume_project_summary.md`
 - `demo_reports/interview/interview_qa.md`
 
-## What The Output Looks Like
-
-These are illustrative snippets meant to help a GitHub visitor quickly judge whether the outputs feel useful, editable, and interview-ready.
-
-### `resume_project_summary.md` sample
-
-```md
-- Built an achievement-audit workflow for multi-source internship materials, combining repos,
-  project notes, and business context into reusable evidence-backed achievement candidates.
-- Ranked achievements against a target JD so the resume-facing version highlights business understanding,
-  implementation depth, and measurable impact before lower-signal details.
-- Added explicit risk reminders for AI-heavy wording, unsupported claims, and unclear ownership boundaries
-  to reduce “sounds polished but collapses under follow-up questions” cases.
-```
-
-### `interview_qa.md` sample
-
-```md
-Q: What was your most important contribution in this project?
-A: My core contribution was not generating a resume directly. It was building a workflow that
-   breaks raw materials into achievements, evidence, and risk layers first, so later summaries
-   stay verifiable and easier to defend in interviews.
-
-Q: Why add risk reminders at all?
-A: Because many AI-generated summaries sound smooth but become vague, overclaimed, or weakly supported.
-   I wanted the tool to surface what must be checked by the user before it reaches the resume.
-```
-
-### What `overview.md` usually contains
-
-- extracted achievements with evidence, metrics, business context, and missing information
-- `user_check_flags` to mark lines that need explicit user confirmation
-- a structure better suited for review first and resume compression second
-
 ## Workflow
 
 Main flow:
@@ -233,98 +200,15 @@ python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_ov
 
 This keeps the current package layout stable. If naming is unified later, it will be called out clearly in the release notes.
 
-## Command Details
+## Output Files
 
-### 1. Achievement Audit
+Running the main workflow usually gives you three core result groups:
 
-```bash
-python -m shushu_internship_tool.achievement_audit --sources your_materials/sources.json --out reports/audit --name internship-materials
-```
+- `reports/audit/`: achievement audit, evidence, risk reminders, and business-context rewrites
+- `reports/rank/`: JD-ranked resume-oriented project summaries
+- `reports/interview/`: project intros, STAR drafts, interview Q&A, and risk answers
 
-Outputs:
-
-- `achievement_audit.json`
-- `overview.md`
-- `overview.html`
-- `business_context_rewrite.md`
-
-This stage also handles:
-
-- splitting a long project summary into multiple achievement candidates
-- extracting metrics, evidence, risks, and missing support
-- adding `user_check_flags` for AI-heavy, unclear-boundary, or likely-overclaimed statements
-- generating a cleaner business-context rewrite for self-review and interview prep
-
-### 2. Resume Ranking
-
-```bash
-python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt --achievements reports/audit/achievement_audit.json --target-role llm-application-intern --out reports/rank
-```
-
-Outputs:
-
-- `resume_rank.json`
-- `resume_rank.md`
-- `resume_project_summary.md`
-
-This stage also suggests:
-
-- more resume-like bullet wording
-- which metrics are most worth adding
-- what evidence or implementation detail is still missing
-- which lines sound too mechanical, repetitive, or overly AI-generated
-
-### 3. Business Doc Knowledge Layer
-
-```bash
-python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_overview.md --mode basic_rag --query "How does the workflow recover failures?" --out reports/knowledge
-```
-
-Supported modes:
-
-- `direct`
-- `basic_rag`
-- `knowledge_base`
-
-### 4. Interview Pack
-
-```bash
-python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role llm-application-intern --out reports/interview
-```
-
-Outputs:
-
-- `interview_pack.json`
-- `resume_star.md`
-- `project_intro.md`
-- `interview_qa.md`
-- `risk_answers.md`
-- `application_checklist.md`
-
-## Current Status
-
-Relatively stable:
-
-- multi-source achievement audit
-- JD-based achievement ranking
-- resume project summary generation
-- interview Q&A and STAR draft generation
-
-Still being strengthened:
-
-- the `doc_knowledge` layer
-- broader role and industry samples
-- finer-grained AI-heaviness and overclaim detection
-- fuller test coverage
-
-## Design Principles
-
-- do not fabricate metrics
-- make missing evidence explicit
-- value business context, not just code
-- calibrate writing style to the target role
-- explicitly warn about AI-heavy or overclaimed phrasing
-- optimize for material that is usable in applications, interviews, and follow-up questions
+If you need retrieval or Q&A over business documents, run `doc_knowledge` separately.
 
 ## Credits And Upstream
 

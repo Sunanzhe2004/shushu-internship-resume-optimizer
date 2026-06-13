@@ -4,6 +4,8 @@
 
 Shushu 会先审计成果与证据，再按目标 JD 排序，最后生成简历 bullet、项目总结、STAR 草稿、面试 Q&A 和风险检查清单。
 
+最近更新：`2026-06-13`
+
 [简体中文](./README.md) · [English](./README.en.md) · [贡献指南](./CONTRIBUTING.md) · [更新说明](./RELEASE_NOTES.md)
 
 ![workflow overview](./assets/workflow-overview.png)
@@ -14,7 +16,6 @@ Shushu 会先审计成果与证据，再按目标 JD 排序，最后生成简历
 
 - [先跑一遍 Demo](#3-分钟试跑)
 - [先看最近更新](#最近更新)
-- [先看输出示例](#输出长什么样)
 - [接入自己的材料](#接入自己的材料)
 - [命名说明](#命名说明)
 - [先看安全提醒](#安全提醒)
@@ -126,39 +127,6 @@ python -m shushu_internship_tool.interview_pack `
 - `demo_reports/rank/resume_project_summary.md`
 - `demo_reports/interview/interview_qa.md`
 
-## 输出长什么样
-
-下面是 README 里直接给你看的示意片段，重点不是“自动生成一堆文件”，而是让你快速判断输出是否像你真的会拿来改、拿来讲。
-
-### `resume_project_summary.md` 示意片段
-
-```md
-- 围绕多源实习材料设计成果审计链路，统一整理代码仓库、项目总结与业务背景文档，
-  将零散记录压缩为可复用的成果项与证据清单。
-- 结合目标 JD 对成果进行排序，优先保留更能体现业务理解、实现深度和可量化影响的内容，
-  用于生成更适合简历投递的项目总结底稿。
-- 对 AI 味重、证据不足或职责边界不清的表述增加显式风险提醒，
-  降低“看起来像写得很好、但追问就露馅”的问题。
-```
-
-### `interview_qa.md` 示意片段
-
-```md
-Q: 这个项目里你最核心的贡献是什么？
-A: 我做的不是直接生成一份简历，而是把原始材料先拆成成果、证据和风险三层，
-   这样后面的简历表达和面试回答都能围绕可验证信息展开。
-
-Q: 为什么要加风险提醒？
-A: 因为很多 AI 生成表述在“读起来顺”之外，还会出现夸大、空泛和边界不清的问题。
-   我希望它先提醒哪些内容需要本人确认，再决定哪些能写进简历。
-```
-
-### `overview.md` 你通常会看到什么
-
-- 每个成果项对应的证据、指标、业务背景和待补信息
-- `user_check_flags` 标记，提醒哪些表述需要你亲自确认
-- 更适合先复盘、再人工压缩进简历的材料结构
-
 ## 工作流
 
 主流程：
@@ -229,97 +197,15 @@ python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_ov
 
 这样做是为了优先保持当前包结构稳定；如果后续统一命名，会在更新说明里明确写出。
 
-## 命令说明
+## 输出文件
 
-### 1. 成果审计
+运行主流程后，通常会得到三组核心结果：
 
-```bash
-python -m shushu_internship_tool.achievement_audit --sources your_materials/sources.json --out reports/audit --name internship-materials
-```
+- `reports/audit/`：成果审计、证据、风险提醒、业务背景改写
+- `reports/rank/`：按目标 JD 排序后的简历版项目总结
+- `reports/interview/`：项目介绍、STAR 草稿、面试 Q&A、风险回答
 
-输出：
-
-- `achievement_audit.json`
-- `overview.md`
-- `overview.html`
-- `business_context_rewrite.md`
-
-这一层额外会做：
-
-- 长项目总结拆分成多个成果项
-- 指标、证据、风险点、待补信息抽取
-- `user_check_flags` 标记，提示哪些表述 AI 味重、边界不清或可能夸大
-- 生成更适合自己复盘和面试解释的业务背景改写
-
-### 2. 简历成果排序
-
-```bash
-python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt --achievements reports/audit/achievement_audit.json --target-role llm-application-intern --out reports/rank
-```
-
-输出：
-
-- `resume_rank.json`
-- `resume_rank.md`
-- `resume_project_summary.md`
-
-这一层额外会给出：
-
-- 更像简历 bullet 的推荐写法
-- 哪些指标最值得补
-- 哪些证据或实现细节还不够支撑当前表述
-- 哪些句子过于机械、重复或 AI 味偏重
-
-### 3. 业务文档知识层
-
-```bash
-python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_overview.md --mode basic_rag --query "How does the workflow recover failures?" --out reports/knowledge
-```
-
-支持模式：
-
-- `direct`
-- `basic_rag`
-- `knowledge_base`
-
-### 4. 面试包
-
-```bash
-python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role llm-application-intern --out reports/interview
-```
-
-输出：
-
-- `interview_pack.json`
-- `resume_star.md`
-- `project_intro.md`
-- `interview_qa.md`
-- `risk_answers.md`
-- `application_checklist.md`
-
-## 当前状态
-
-相对稳定：
-
-- 多源材料成果审计
-- JD-based 成果排序
-- 简历项目总结生成
-- 面试 Q&A / STAR 草稿生成
-
-持续增强：
-
-- `doc_knowledge` 知识层
-- 更多行业 / 岗位样本
-- 更细粒度的 AI 味和夸大检测
-- 更完整的测试覆盖
-
-## 设计原则
-
-- 不编造数字，没有稳定指标就明确标注“待补量化 / 待补证据”
-- 不只看代码，也重视业务背景和上下游流程
-- 简历表达按目标岗位校准，而不是统一套模板
-- 对 AI 味重或可能夸大的内容做显式提醒
-- 优先产出“可投、可讲、可追问展开”的材料
+如果需要业务文档问答或知识检索，可以额外运行 `doc_knowledge`。
 
 ## 致谢与来源
 
