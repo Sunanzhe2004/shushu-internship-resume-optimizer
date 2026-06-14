@@ -61,6 +61,42 @@ VALUE_SIGNAL_RE = re.compile(
     r"(?i)(?:减少|降低|提升|优化|节省|支持|避免|拦截|过滤|定位|归因|恢复|稳定|吞吐|准确率|召回率|一致率|F1|Recall|Precision|成本|效率|误判|耗时|延迟|成功率)",
     re.IGNORECASE,
 )
+TECH_STACK_TERM_RE = re.compile(r"[A-Za-z][A-Za-z0-9_+#.-]*")
+METRIC_SIGNAL_RE = re.compile(
+    r"(?i)(?:\d|减少|降低|提升|优化|节省|支持|避免|拦截|过滤|定位|归因|恢复|稳定|吞吐|准确率|召回率|一致率|F1|Recall|Precision|成本|效率|误判|耗时|延迟|成功率)"
+)
+KNOWN_TECH_STACK_TERMS = {
+    "python",
+    "java",
+    "golang",
+    "go",
+    "javascript",
+    "typescript",
+    "fastapi",
+    "flask",
+    "django",
+    "spring",
+    "springboot",
+    "asyncio",
+    "sqlite",
+    "mysql",
+    "postgres",
+    "postgresql",
+    "redis",
+    "mongodb",
+    "kafka",
+    "rabbitmq",
+    "celery",
+    "docker",
+    "k8s",
+    "kubernetes",
+    "nginx",
+    "grpc",
+    "http",
+    "api",
+    "llm",
+    "vlm",
+}
 
 AI_SUMMARY_MARKERS = {
     "一句话定位",
@@ -376,9 +412,21 @@ def filter_meaningful_metrics(metrics: list[str]) -> list[str]:
             continue
         if is_low_value_workload_text(clean):
             continue
+        if is_plain_tech_stack_metric(clean):
+            continue
         if clean not in kept:
             kept.append(clean)
     return kept[:6]
+
+
+def is_plain_tech_stack_metric(text: str) -> bool:
+    clean = " ".join(str(text).split()).strip(" -:：")
+    if not clean or METRIC_SIGNAL_RE.search(clean):
+        return False
+    tokens = [token.lower() for token in TECH_STACK_TERM_RE.findall(clean)]
+    if not tokens:
+        return False
+    return all(token in KNOWN_TECH_STACK_TERMS for token in tokens)
 
 
 def extract_metrics(text: str) -> list[str]:
@@ -816,7 +864,7 @@ def structured_extract_to_evidence(
         excerpt = " ".join(part for part in excerpt_parts if part).strip()
         if not excerpt:
             excerpt = title
-        item_metrics = metrics or extract_metrics(excerpt)
+        item_metrics = filter_meaningful_metrics(metrics) or extract_metrics(excerpt)
         evidence.append(
             {
                 "source_type": bundle["source_type"],
@@ -972,7 +1020,7 @@ def merge_achievements(evidence_items: list[dict[str, Any]], knowledge_entries: 
         tag_counts = Counter(tag for item in items for tag in item["tags"])
         top_tags = [tag for tag, _ in tag_counts.most_common(8)]
         excerpts = [item["excerpt_summary"] for item in items[:6]]
-        metrics = list(dict.fromkeys(metric for item in items for metric in item.get("metrics", [])))[:6]
+        metrics = filter_meaningful_metrics(list(dict.fromkeys(metric for item in items for metric in item.get("metrics", []))))[:6]
         knowledge_hits = []
         for entry in knowledge_entries:
             knowledge_hits.extend(query_knowledge(entry, " ".join(top_tags[:4]) or cluster_key, top_k=1))

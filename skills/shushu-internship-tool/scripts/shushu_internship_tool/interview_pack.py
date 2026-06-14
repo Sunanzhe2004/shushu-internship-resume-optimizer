@@ -59,8 +59,6 @@ def compress_sentence(text: str, fallback: str) -> str:
 def choose_metric(item: dict[str, Any]) -> str:
     if item.get("best_metric"):
         return sanitize_text(item["best_metric"])
-    if item.get("core_result"):
-        return sanitize_text(item["core_result"])
     metrics = normalize_list(item.get("metrics"))
     return sanitize_text(metrics[0]) if metrics else "阶段性工程结果待补充"
 

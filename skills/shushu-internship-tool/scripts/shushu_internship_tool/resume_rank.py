@@ -205,10 +205,6 @@ def choose_business_context(item: dict[str, Any]) -> str:
 def extract_metric_summary(item: dict[str, Any]) -> str:
     if item.get("best_metric"):
         return sanitize_text(item["best_metric"])
-    if item.get("core_result"):
-        result = sanitize_text(item["core_result"])
-        if result and result != sanitize_text(item.get("one_line_scope", "")):
-            return result
     metrics = normalize_list(item.get("metrics"))
     if metrics:
         return best_metric(metrics)
