@@ -77,6 +77,10 @@ Focus on:
 - which achievements are worth keeping for the target role
 - which bullets should stay separate vs. merge
 - whether bullet ordering follows causal flow: setup -> mechanism -> result
+- choose bullet density by project count instead of defaulting to a fixed 3 to 4 bullets
+- if the user says the project is only one part of their work, merge same-mainline bullets first; but if the material is one complete project, 4 to 5 bullets can still be reasonable
+- review the final resume summary for scanability before presenting it: repeated openings, overlong bullets, and over-splitting should be fixed first
+- scripts may suggest merge candidates, but only the skill / prompt layer should decide whether two bullets or modules actually belong in one resume line
 
 ### 5. Interview Pack
 
@@ -101,7 +105,9 @@ Recommended model responsibilities:
 - extract `background / task / actions / outcome / business_value`
 - identify whether a bullet is worth keeping
 - suggest merge candidates
+- generate merged wording only after the prompt layer has decided that a merge is actually appropriate
 - rewrite titles into concise, resume-usable wording
+- make the final semantic judgment on whether similar-looking work should stay split because project boundary, audience, deliverable, or ownership is different
 
 Recommended script responsibilities:
 - accept structured extraction
@@ -109,6 +115,9 @@ Recommended script responsibilities:
 - attach evidence and warnings
 - rank and format outputs
 - provide fallback parsing only when structured extraction is absent
+- enforce light guardrails such as bullet-count caps, scanability reminders, and readability review
+- never hard-code semantic merge decisions that depend on project boundary understanding
+- avoid role-track-specific writing templates when a generic structured summary is enough
 
 See:
 - [model-first-extraction.md](./references/model-first-extraction.md)
@@ -128,3 +137,13 @@ Avoid these unless there is no better option:
 - never fabricate metrics
 - prefer evidence, action, outcome, and business value over buzzwords
 - keep uncertainty explicit when evidence is incomplete
+- prefer fewer, denser bullets over many thin bullets when several points belong to the same project mainline
+- default compression strategy:
+  - 1 project: 4 to 5 bullets is acceptable when the project is complete and each bullet carries a distinct main point
+  - 2 projects: 2 to 3 bullets per project is usually reasonable
+  - 3+ projects: usually 1 to 2 bullets per project in the resume-facing summary
+- before returning the final artifact, do a readability review:
+  - can a recruiter scan it in a few seconds
+  - are same-project bullets repetitive enough to merge
+  - is any bullet carrying background, action, and result in a bloated way
+- if project boundary is ambiguous, stay conservative in the final artifact: keep modules split first, then let the prompt explain possible merge options

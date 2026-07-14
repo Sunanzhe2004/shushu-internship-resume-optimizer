@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .common import ensure_dir, load_json, markdown_table, normalize_list, write_json, write_text
-from .resume_style_bench import detect_generated_style_issues, get_style_benchmark
+from .resume_style_bench import detect_generated_style_issues
 
 
 NOISE_PREFIXES = (
@@ -102,26 +102,6 @@ def short_business_value(item: dict[str, Any]) -> str:
     return clean[:60].rstrip("，。！？； ") if len(clean) > 60 else clean
 
 
-def infer_semantic_track(item: dict[str, Any]) -> str:
-    text = " ".join(
-        [
-            sanitize_text(item.get("title", "")),
-            sanitize_text(item.get("task", "")),
-            sanitize_text(item.get("outcome", "")),
-            sanitize_text(item.get("business_context", "")),
-            " ".join(normalize_list(item.get("actions"))),
-            " ".join(normalize_list(item.get("tech_stack"))),
-        ]
-    ).lower()
-    if any(keyword in text for keyword in ("service", "fastapi", "asyncio", "http", "queue", "workflow", "pipeline", "服务")):
-        return "service"
-    if any(keyword in text for keyword in ("label", "归因", "标签", "错误", "失败", "case")):
-        return "analysis"
-    if any(keyword in text for keyword in ("prompt", "llm", "vlm", "judge", "评估", "eval", "判定", "规则")):
-        return "evaluation"
-    return "general"
-
-
 def select_achievements(payload: dict[str, Any]) -> list[dict[str, Any]]:
     achievements = payload.get("achievements")
     if not isinstance(achievements, list):
@@ -129,7 +109,6 @@ def select_achievements(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return sorted(
         (dict(item) for item in achievements),
         key=lambda item: (
-            {"evaluation": 0, "analysis": 1, "service": 2, "general": 3}.get(infer_semantic_track(item), 9),
             -int(item.get("score", 0)),
             len(item.get("risk_notes", item.get("risk_flags", []))),
             item.get("title", ""),
@@ -169,21 +148,15 @@ def qa_answer_for_scope(item: dict[str, Any]) -> str:
 
 
 def qa_answer_for_flow(item: dict[str, Any]) -> str:
-    track = infer_semantic_track(item)
     action = summarize_actions(item, limit=2)
     context = short_context(item)
-    if track == "service":
-        return f"可以先从{context}切入，再讲我是怎么把这套流程服务化的，重点包括{action}。"
-    if track == "analysis":
-        return f"可以先讲失败 case 怎么进入分析链路，再讲我怎么做结构化标签归因，重点包括{action}。"
-    if track == "evaluation":
-        return f"可以先讲任务轨迹进入评估链路后，前置过滤、核心判定和结果兜底是怎么串起来的，重点包括{action}。"
-    return f"可以先从{context}切入，再补充这项工作的业务价值主要在于{short_business_value(item)}。"
+    value = short_business_value(item)
+    return f"可以先从{context}切入，再顺着我具体做的{action}往下讲，最后落到这项工作的业务价值主要在于{value}。"
 
 
 def render_resume_star(achievements: list[dict[str, Any]], target_role: str) -> str:
-    benchmark = get_style_benchmark(target_role or "backend")
-    parts = [f"# STAR 简历草稿（{benchmark['track']}）", ""]
+    del target_role
+    parts = ["# STAR 简历草稿", ""]
     for item in achievements[:4]:
         parts.extend(
             [

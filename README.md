@@ -4,7 +4,7 @@
 
 Shushu 会先审计成果与证据，再按目标 JD 排序，最后生成简历 bullet、项目总结、STAR 草稿、面试 Q&A 和风险检查清单。
 
-最近更新：`2026-06-13`
+最近更新：`2026-07-14`
 
 [简体中文](./README.md) · [English](./README.en.md) · [贡献指南](./CONTRIBUTING.md) · [更新说明](./RELEASE_NOTES.md)
 
@@ -17,7 +17,6 @@ Shushu 会先审计成果与证据，再按目标 JD 排序，最后生成简历
 - [先跑一遍 Demo](#3-分钟试跑)
 - [先看最近更新](#最近更新)
 - [接入自己的材料](#接入自己的材料)
-- [命名说明](#命名说明)
 - [先看安全提醒](#安全提醒)
 
 ## 最近更新
@@ -25,9 +24,9 @@ Shushu 会先审计成果与证据，再按目标 JD 排序，最后生成简历
 这一轮更新把主流程进一步收敛到 `model-first, script-second`：
 
 - `achievement_audit` 优先读取 `sources.json` 里的 `structured_extract_path` 或 `structured_extract`
-- 如果同一次运行已经提供结构化抽取结果，`business_docs` 默认主要补业务上下文，不再单独产生成果候选污染主线
-- `resume_rank` 不再依赖样例标题映射，更依赖 `task`、`actions`、`metrics`、`business_value` 等结构字段
-- `interview_pack` 现在可以直接读取 `resume_rank.json` 里的 `ranked_achievements`，端到端 handoff 更稳定
+- 结构化抽取存在时，`business_docs` 默认主要补业务上下文，不再单独产生成果候选污染主线
+- `resume_rank` / `interview_pack` 进一步收回了脚本里的写法模板和项目类型硬编码，更偏向做结构化压缩、排序、提示与可读性复核
+- 如果检测到强相关 bullet，脚本只给“可人工审阅的候选组合”和原因；项目边界、是否合并、最终语气优先交给 skill / prompt 层判断
 
 更推荐的使用顺序是：
 
@@ -52,6 +51,7 @@ Shushu 会先审计成果与证据，再按目标 JD 排序，最后生成简历
 - 不是直接“编简历”：先提取证据、指标、职责边界，再生成表达
 - 不是统一模板：会结合目标 JD 对成果排序
 - 不是只看代码：同时支持 `code_repo`、`project_summary`、`business_docs`
+- 脚本更像护栏：主要负责限额、排序、风险提醒和可读性检查，而不是替你拍板项目边界
 - 不鼓励吹牛：会标记 AI 味、夸大风险和待确认信息
 - 不止写简历：同时生成项目介绍、STAR 草稿、追问 Q&A 和投递前检查清单
 
@@ -141,20 +141,13 @@ python -m shushu_internship_tool.interview_pack `
 
 1. 先准备 `sources.json`，把代码仓库、项目总结和业务背景文档整理进去。
 2. 先跑 `achievement_audit`，确认成果抽取、证据和风险提醒是否合理。
-3. 再跑 `resume_rank`，判断哪些成果最适合当前目标岗位。
-4. 最后跑 `interview_pack`，把结果转成 STAR、项目介绍和面试问答。
+3. 再跑 `resume_rank`，判断哪些成果最适合当前目标岗位，并检查项目数、bullet 数和可读性提醒是否合理。
+4. 如果输出里出现“强关联项目合并建议”，优先把它当成人工审阅线索，而不是默认接受。
+5. 最后跑 `interview_pack`，把结果转成 STAR、项目介绍和面试问答，再由 skill / prompt 做最终口语化或风格整理。
 
 ## 接入自己的材料
 
-最常见的完整链路是：
-
-```bash
-python -m shushu_internship_tool.achievement_audit --sources your_materials/sources.json --out reports/audit --name internship-materials
-python -m shushu_internship_tool.resume_rank --jd your_materials/target_jd.txt --achievements reports/audit/achievement_audit.json --target-role llm-application-intern --out reports/rank
-python -m shushu_internship_tool.interview_pack --project-notes reports/rank/resume_rank.json --target-role llm-application-intern --out reports/interview
-```
-
-最小输入结构可以参考 [examples/minimal_input](./examples/minimal_input/)：
+把上面 Demo 里的 `examples/minimal_input/...` 替换成你自己的 `your_materials/...` 即可。最小输入结构可以参考 [examples/minimal_input](./examples/minimal_input/)：
 
 - `sources.json`：输入索引，串起 repo、总结和业务文档
 - `project_summary.md`：长一点也没关系，适合先交给工具做拆解
@@ -187,41 +180,22 @@ python -m shushu_internship_tool.interview_pack --project-notes reports/rank/res
 python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_overview.md --mode basic_rag --query "What are the main failure modes?" --out reports/knowledge
 ```
 
-## 命名说明
-
-- 仓库名：`shushu-internship-resume-optimizer`
-- Python package：`shushu-internship-tool`
-- 模块路径：`shushu_internship_tool`
-- Console scripts：`shushu-achievement-audit`、`shushu-resume-rank`、`shushu-interview-pack`
-- README 里当前推荐运行方式：`python -m shushu_internship_tool.xxx`
-
-这样做是为了优先保持当前包结构稳定；如果后续统一命名，会在更新说明里明确写出。
-
 ## 输出文件
 
 运行主流程后，通常会得到三组核心结果：
 
 - `reports/audit/`：成果审计、证据、风险提醒、业务背景改写
-- `reports/rank/`：按目标 JD 排序后的简历版项目总结
-- `reports/interview/`：项目介绍、STAR 草稿、面试 Q&A、风险回答
+- `reports/rank/`：按目标 JD 排序后的简历版项目总结，包含 bullet 数控制、可读性复核和可人工审阅的合并候选
+- `reports/interview/`：项目介绍、STAR 草稿、面试 Q&A、风险回答；默认提供结构化骨架，最终语气和细化表达建议由 skill / prompt 再处理
 
 如果需要业务文档问答或知识检索，可以额外运行 `doc_knowledge`。
 
 ## 致谢与来源
 
 这个仓库基于原项目做了面向“实习简历整理 / 面试复盘”场景的二次开发与定向重构。
-
-当前主流程聚焦于：
-
-`achievement_audit -> resume_rank -> interview_pack`
-
-可选增强能力：
-
-`doc_knowledge`
-
 感谢原项目开发者提供基础工作流与思路，原始项目：
 
-- `https://github.com/LiuMengxuan04/shushu-internship-tool`
+- [LiuMengxuan04/shushu-internship-tool](https://github.com/LiuMengxuan04/shushu-internship-tool)
 
 ## 参与贡献
 
@@ -237,5 +211,3 @@ python -m shushu_internship_tool.doc_knowledge --docs your_materials/business_ov
 - 公司内部文档、策略、流程细节
 - 含有用户信息、账号信息、密钥、访问凭证的材料
 - 任何明确不能对外传播的实习内容
-
-如果你想体验测试，建议优先使用脱敏后的材料，或者自己手动改写后的项目总结。

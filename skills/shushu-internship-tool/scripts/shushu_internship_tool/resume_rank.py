@@ -140,25 +140,6 @@ def best_metric(metrics: list[str]) -> str:
     return metrics[0]
 
 
-def choose_lead_verb(item: dict[str, Any], variant: int = 0) -> str:
-    text = " ".join(
-        [
-            item.get("title", ""),
-            item.get("task", ""),
-            " ".join(normalize_list(item.get("actions"))),
-        ]
-    ).lower()
-    if any(keyword in text for keyword in ("评估", "eval", "judge")):
-        return "优化" if variant == 0 else "搭建"
-    if any(keyword in text for keyword in ("标签", "归因", "分类")):
-        return "推进" if variant == 0 else "完善"
-    if any(keyword in text for keyword in ("服务", "fastapi", "asyncio", "workflow", "pipeline")):
-        return "搭建" if variant == 0 else "落地"
-    if any(keyword in text for keyword in ("prompt", "llm", "vlm", "规则")):
-        return "迭代" if variant == 0 else "优化"
-    return "负责" if variant == 0 else "推进"
-
-
 def extract_sentences(text: str) -> list[str]:
     clean = sanitize_text(text)
     if not clean:
@@ -188,12 +169,7 @@ def choose_focus_fragment(item: dict[str, Any]) -> str:
         return compress_phrase(seeded, 28)
     fragments = extract_action_fragments(item, limit=4)
     if not fragments:
-        return "推进评估链路优化"
-    preferred = ("设计", "搭建", "优化", "迭代", "实现", "构建", "接入", "过滤", "识别", "归因", "支持")
-    for keyword in preferred:
-        for fragment in fragments:
-            if keyword in fragment:
-                return compress_phrase(fragment, 28)
+        return "推进关键工作"
     return compress_phrase(fragments[0], 28)
 
 
@@ -218,35 +194,6 @@ def extract_metric_summary(item: dict[str, Any]) -> str:
     return cleaned[0] if cleaned else ""
 
 
-def infer_semantic_track(item: dict[str, Any]) -> str:
-    text = " ".join(
-        [
-            sanitize_text(item.get("title", "")),
-            sanitize_text(item.get("task", "")),
-            sanitize_text(item.get("outcome", "")),
-            sanitize_text(item.get("business_context", "")),
-            " ".join(normalize_list(item.get("actions"))),
-            " ".join(normalize_list(item.get("tech_stack"))),
-        ]
-    ).lower()
-    if any(keyword in text for keyword in ("service", "fastapi", "asyncio", "http", "queue", "workflow", "pipeline", "服务")):
-        return "service"
-    if any(keyword in text for keyword in ("label", "归因", "标签", "错误", "失败", "case")):
-        return "analysis"
-    if any(keyword in text for keyword in ("prompt", "llm", "vlm", "judge", "评估", "eval", "判定", "规则")):
-        return "evaluation"
-    return "general"
-
-
-def title_track(item: dict[str, Any]) -> str:
-    return infer_semantic_track(item)
-
-
-def track_rank(item: dict[str, Any]) -> int:
-    order = {"evaluation": 0, "analysis": 1, "service": 2, "general": 3}
-    return order.get(title_track(item), 9)
-
-
 def related_item_tokens(item: dict[str, Any]) -> set[str]:
     return tokenize(
         " ".join(
@@ -266,8 +213,6 @@ def related_item_tokens(item: dict[str, Any]) -> set[str]:
 
 def merge_reason_summary(left: dict[str, Any], right: dict[str, Any], overlap: set[str]) -> list[str]:
     reasons: list[str] = []
-    if title_track(left) == title_track(right):
-        reasons.append("同一能力主线")
     shared_tech = list(dict.fromkeys(set(normalize_list(left.get("tech_stack"))) & set(normalize_list(right.get("tech_stack")))))
     if shared_tech:
         reasons.append(f"共享技术栈：{', '.join(shared_tech[:3])}")
@@ -299,8 +244,6 @@ def merge_reason_summary(left: dict[str, Any], right: dict[str, Any], overlap: s
 def relation_score(left: dict[str, Any], right: dict[str, Any]) -> tuple[int, list[str]]:
     overlap = related_item_tokens(left) & related_item_tokens(right)
     score = len(overlap)
-    if title_track(left) == title_track(right):
-        score += 3
     if set(normalize_list(left.get("tech_stack"))) & set(normalize_list(right.get("tech_stack"))):
         score += 2
     left_context = choose_business_context(left)
@@ -323,33 +266,6 @@ def concise_metric(metric: str) -> str:
     return clean
 
 
-def build_merged_bullet(left: dict[str, Any], right: dict[str, Any], variant: int = 0) -> str:
-    context = choose_business_context(left)
-    other_context = choose_business_context(right)
-    if other_context and len(other_context) > len(context):
-        context = other_context
-    action_a = choose_focus_fragment(left)
-    action_b = choose_focus_fragment(right)
-    metric_a = concise_metric(extract_metric_summary(left))
-    metric_b = concise_metric(extract_metric_summary(right))
-    metrics = [metric for metric in [metric_a, metric_b] if metric]
-    metric_text = "；".join(list(dict.fromkeys(metrics))[:2])
-    shared_tech = "/".join(
-        list(dict.fromkeys([*normalize_list(left.get("tech_stack")), *normalize_list(right.get("tech_stack"))]))[:3]
-    )
-    if variant == 0:
-        sentence = f"围绕{context}，串联{action_a}与{action_b}"
-        if shared_tech:
-            sentence += f"，覆盖{shared_tech}等关键实现"
-    else:
-        sentence = f"将两块强关联工作合并整理：一方面{action_a}，另一方面{action_b}"
-        if context:
-            sentence += f"，共同服务于{context}"
-    if metric_text:
-        sentence += f"，结果可结合{metric_text}一起表达"
-    return sentence
-
-
 def build_related_merge_candidates(ranked: list[dict[str, Any]]) -> list[dict[str, Any]]:
     candidates: list[dict[str, Any]] = []
     for index, left in enumerate(ranked):
@@ -363,10 +279,6 @@ def build_related_merge_candidates(ranked: list[dict[str, Any]]) -> list[dict[st
                     "achievement_titles": [left.get("title", ""), right.get("title", "")],
                     "merge_strength": score,
                     "merge_reasons": reasons,
-                    "merged_resume_bullets": [
-                        build_merged_bullet(left, right, variant=0),
-                        build_merged_bullet(left, right, variant=1),
-                    ],
                 }
             )
     return sorted(candidates, key=lambda item: (-item["merge_strength"], item["achievement_titles"]))
@@ -398,73 +310,119 @@ def reorder_bullets_by_causality(bullets: list[str]) -> list[str]:
     return [bullet for _, bullet, _ in ordered]
 
 
-def build_track_bullet(item: dict[str, Any], variant: int = 0) -> str:
-    track = title_track(item)
-    title = sanitize_text(item.get("title", "项目"))
-    action = choose_focus_fragment(item)
-    metric = concise_metric(extract_metric_summary(item))
-    business = choose_business_context(item)
-    value = compress_phrase(sanitize_text(item.get("business_value", "")), 24)
-    tech = "/".join(normalize_list(item.get("tech_stack"))[:3]) or "Python"
+def normalized_project_title(item: dict[str, Any]) -> str:
+    return sanitize_text(item.get("title", "")) or "未命名项目"
 
-    if track == "service":
-        base = (
-            f"围绕{business or title}搭建服务化能力，基于{tech}完成{action}"
-            if variant == 0
-            else f"将{title}落到可复用服务形态，围绕{action}补齐工程化运行能力"
-        )
-    elif track == "analysis":
-        base = (
-            f"围绕{business or title}推进{title}，通过{action}支撑失败样本归因与问题定位"
-            if variant == 0
-            else f"围绕{title}完善结构化分析链路，重点完成{action}"
-        )
-    elif track == "evaluation":
-        base = (
-            f"围绕{business or title}优化{title}，重点推进{action}"
-            if variant == 0
-            else f"面向{business or title}搭建评估与判定能力，围绕{action}持续迭代"
-        )
-    else:
-        return ""
 
-    if value and value not in base and value != action:
-        base += f"，支撑{value}"
-    if metric:
-        base += f"，结果为{metric}"
-    return base
+def count_project_key(item: dict[str, Any]) -> str:
+    for field in ("project_key", "project_group", "project_title", "parent_project_title"):
+        value = sanitize_text(item.get(field, ""))
+        if value:
+            return value
+    return normalized_project_title(item)
+
+
+def choose_bullet_strategy(ranked: list[dict[str, Any]]) -> dict[str, Any]:
+    project_keys = [count_project_key(item) for item in ranked if count_project_key(item)]
+    unique_project_keys = list(dict.fromkeys(project_keys))
+    project_count = len(unique_project_keys)
+
+    if project_count <= 1:
+        return {
+            "project_count": project_count,
+            "max_total_bullets": 5,
+            "per_project_cap": 5,
+            "label": "单项目压缩",
+            "guidance": "当前材料更像单个完整项目时，简历里保留 4 到 5 条 bullet 是合理的；只有明显重复或过细时再优先合并。",
+            "project_keys": unique_project_keys,
+        }
+    if project_count == 2:
+        return {
+            "project_count": project_count,
+            "max_total_bullets": 6,
+            "per_project_cap": 3,
+            "label": "双项目平衡",
+            "guidance": "两个项目时每个项目保留 2 到 3 条 bullet 更常见，先保证两个项目都讲清，再压缩重复表述。",
+            "project_keys": unique_project_keys,
+        }
+    return {
+        "project_count": project_count,
+        "max_total_bullets": min(project_count * 2, 8),
+        "per_project_cap": 2,
+        "label": "多项目收束",
+        "guidance": "项目较多时每个项目保留 1 到 2 条 bullet，先覆盖主要项目，再避免单个项目展开过深。",
+        "project_keys": unique_project_keys,
+    }
+
+
+def select_summary_bullets(
+    ranked: list[dict[str, Any]],
+    use_merged_bullet: bool = False,
+    merge_candidates: list[dict[str, Any]] | None = None,
+) -> tuple[list[str], dict[str, Any]]:
+    del use_merged_bullet, merge_candidates
+    strategy = choose_bullet_strategy(ranked)
+    selected: list[str] = []
+    project_counts: dict[str, int] = {}
+
+    for item in ranked:
+        bullets = item.get("resume_bullets") or []
+        if not bullets:
+            continue
+        project_key = count_project_key(item)
+        if project_counts.get(project_key, 0) >= strategy["per_project_cap"]:
+            continue
+        selected.append(bullets[0])
+        project_counts[project_key] = project_counts.get(project_key, 0) + 1
+        if len(selected) >= strategy["max_total_bullets"]:
+            break
+
+    return reorder_bullets_by_causality(selected[: strategy["max_total_bullets"]]), strategy
+
+
+def review_summary_readability(bullets: list[str], strategy: dict[str, Any]) -> list[str]:
+    issues = detect_generated_style_issues(bullets)
+    if len(bullets) > strategy["max_total_bullets"]:
+        issues.append(
+            f"bullet 数偏多：当前 {len(bullets)} 条，按“{strategy['label']}”建议控制在 {strategy['max_total_bullets']} 条以内。"
+        )
+    long_bullets = [bullet for bullet in bullets if len(sanitize_text(bullet)) > 72]
+    if long_bullets:
+        issues.append("部分 bullet 句子过长，建议继续合并重复修饰或删去次要背景。")
+    if strategy["project_count"] <= 1 and len(bullets) > 5:
+        issues.append("单项目材料 bullet 偏多，建议优先收束到 4 到 5 条主线 bullet。")
+    if strategy["project_count"] == 2 and len(bullets) > 6:
+        issues.append("双项目版本 bullet 偏多，建议控制在每个项目 2 到 3 条。")
+    if strategy["project_count"] >= 3 and len(bullets) > strategy["project_count"] * 2:
+        issues.append("多项目版本 bullet 偏多，建议控制在每个项目 1 到 2 条。")
+    return list(dict.fromkeys(issues))
 
 
 def build_bullet(item: dict[str, Any], target_role: str, jd_text: str, variant: int = 0) -> str:
     del jd_text
-    track_bullet = build_track_bullet(item, variant=variant)
-    if track_bullet:
-        return track_bullet
-
-    benchmark = get_style_benchmark(target_role or item.get("target_role", ""))
     title = sanitize_text(item.get("title", "项目")) or "项目"
     action = choose_focus_fragment(item)
     business = choose_business_context(item)
     tech_stack = "/".join(normalize_list(item.get("tech_stack"))[:3]) or "Python/工程工具链"
     metric = concise_metric(extract_metric_summary(item))
     business_value = compress_phrase(sanitize_text(item.get("business_value", "")), 26)
-    short_tech = compress_phrase(tech_stack, 20)
-    lead = choose_lead_verb(item, variant=variant)
-
-    if benchmark["track"] == "ai":
-        if variant == 0:
-            base = f"{lead}{title}，重点完成{action}"
-            if business_value and business_value != action:
-                base += f"，支撑{business_value}"
-            return base + (f"，结果为{metric}" if metric else "")
-        return f"在{business or title}场景中{lead}{title}，结合{short_tech}推进{action}" + (f"，核心结果为{metric}" if metric else "")
+    short_tech = compress_phrase(tech_stack, 18)
+    context = business or title
 
     if variant == 0:
-        base = f"{lead}{title}，基于{compress_phrase(tech_stack, 18)}推进{action}"
-        if business_value and business_value != action:
-            base += f"，支撑{business_value}"
-        return base + (f"，结果为{metric}" if metric else "")
-    return f"围绕{business or title}落地{title}，通过{action}支撑业务需求" + (f"，并取得{metric}" if metric else "")
+        base = f"围绕{context}完成{action}"
+        if short_tech and short_tech not in base:
+            base += f"，涉及{short_tech}"
+    else:
+        base = f"{title}中重点推进{action}"
+        if business and business != title:
+            base += f"，服务于{business}"
+
+    if business_value and business_value not in base and business_value != action:
+        base += f"，支撑{business_value}"
+    if metric:
+        base += f"，结果为{metric}"
+    return base
 
 
 def derive_recommendation_reason(item: dict[str, Any]) -> str:
@@ -581,7 +539,7 @@ def rank_achievements(jd_text: str, achievements: list[dict[str, Any]], target_r
     ranked = [score_achievement(item, jd_text, target_role) for item in achievements]
     return sorted(
         ranked,
-        key=lambda item: (-item["score"], track_rank(item), len(item["risk_notes"]), item["title"]),
+        key=lambda item: (-item["score"], len(item["risk_notes"]), item["title"]),
     )
 
 
@@ -624,22 +582,24 @@ def render_resume_project_summary(
 ) -> str:
     merge_candidates = build_related_merge_candidates(ranked)
     role_label = target_role or (ranked[0].get("target_role", "") if ranked else "未指定")
-    top = ranked[:4]
-    bullets = [item["resume_bullets"][0] for item in top if item.get("resume_bullets")]
-    if use_merged_bullet and merge_candidates:
-        bullets = [merge_candidates[0]["merged_resume_bullets"][1], *bullets]
-    bullets = reorder_bullets_by_causality(bullets)
-    style_issues = detect_generated_style_issues(bullets)
+    bullets, strategy = select_summary_bullets(
+        ranked,
+        use_merged_bullet=use_merged_bullet,
+        merge_candidates=merge_candidates,
+    )
+    style_issues = review_summary_readability(bullets, strategy)
 
     lines = [
         "# 简历项目精简版",
         "",
         f"- 面向 `{role_label}` 的简历版项目描述，建议保留 1 句项目定位 + 2 到 4 条结果导向 bullet。",
         "- 可直接写进简历，也可以作为后续 refine 的输入底稿。",
+        f"- 当前采用“{strategy['label']}”策略：{strategy['guidance']}",
+        "- 如检测到强相关 bullet，脚本只提供合并提醒；是否合并应由上层 skill / prompt 结合项目边界来判断。",
         "",
         "## 建议写法",
         "",
-        "\n".join(f"- {bullet}" for bullet in bullets[:4]),
+        "\n".join(f"- {bullet}" for bullet in bullets),
         "",
     ]
     if merge_candidates:
@@ -648,15 +608,25 @@ def render_resume_project_summary(
             [
                 "## 强关联项目合并建议",
                 "",
-                f"- 推荐组合：{' + '.join(top_merge['achievement_titles'])}",
+                f"- 可人工审阅的候选组合：{' + '.join(top_merge['achievement_titles'])}",
                 f"- 原因：{'；'.join(top_merge['merge_reasons'])}",
-                f"- 合并版 bullet：{top_merge['merged_resume_bullets'][0]}",
-                "- 默认仍保留拆开写；如果你更想突出一条完整主线，可以改用这条合并版 bullet。",
+                "- 默认仍保留拆开写；如需合并，应由 skill / prompt 基于项目边界、简历总项目数和投递目标重新生成表达。",
                 "",
             ]
         )
     if style_issues:
         lines.extend(["## 生成表述提醒", "", *[f"- {issue}" for issue in style_issues], ""])
+    lines.extend(
+        [
+            "## 可读性复核",
+            "",
+            f"- 项目数：`{strategy['project_count']}`",
+            f"- bullet 数：`{len(bullets)}` / 建议上限 `{strategy['max_total_bullets']}`",
+            f"- 每个项目建议上限：`{strategy['per_project_cap']}`",
+            f"- 复核结论：`{'需人工再收束' if style_issues else '通过，可直接进入最终产物'}`",
+            "",
+        ]
+    )
     lines.extend(
         [
             "## 使用提醒",
@@ -676,10 +646,12 @@ def write_ranking_outputs(
 ) -> dict[str, str]:
     out = ensure_dir(out_dir)
     merge_candidates = build_related_merge_candidates(ranked)
+    summary_strategy = choose_bullet_strategy(ranked)
     payload = {
         "target_role": target_role,
         "achievement_count": len(ranked),
         "merge_related_bullets_enabled": use_merged_bullet,
+        "resume_summary_strategy": summary_strategy,
         "related_merge_candidates": merge_candidates,
         "ranked_achievements": ranked,
     }
@@ -705,7 +677,7 @@ def main() -> None:
     parser.add_argument(
         "--merge-related-bullets",
         action="store_true",
-        help="When strong-related project bullets are detected, include the merged version directly in the resume project summary.",
+        help="When strong-related project bullets are detected, surface merged-bullet suggestions in the summary for prompt-level review.",
     )
     args = parser.parse_args()
 
